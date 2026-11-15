@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Japan Inbound & Cross-Border Rules MCP | Souon AI Micro Store</title>
+  <meta name="description" content="Verified, structured official Japan inbound travel and cross-border regulatory rules for AI Agents (Tax-Free Reform Nov 2026, Shinkansen Luggage, Customs).">
+  <style>
+    :root {
+      --bg-color: #0b0f19;
+      --card-bg: #131b2e;
+      --card-border: #1e293b;
+      --primary: #10b981;
+      --primary-hover: #059669;
+      --primary-light: rgba(16, 185, 129, 0.15);
+      --accent-cyan: #38bdf8;
+      --accent-cyan-light: rgba(56, 189, 248, 0.12);
+      --accent-purple: #a855f7;
+      --accent-amber: #f59e0b;
+      --accent-red: #ef4444;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --text-dim: #64748b;
+      --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --radius: 12px;
+      --radius-sm: 8px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      font-family: var(--font-family);
+      line-height: 1.5;
+      padding: 16px 12px 64px 12px;
+      overflow-x: hidden;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    /* Header */
+    header {
+      text-align: center;
+      padding: 24px 8px 32px 8px;
+      border-bottom: 1px solid var(--card-border);
+      margin-bottom: 24px;
+    }
+
+    .badge-tag {
+      display: inline-block;
+      background: var(--primary-light);
+      color: var(--primary);
+      font-size: 12px;
+      font-weight: 700;
+      padding: 4px 12px;
+      border-radius: 9999px;
+      margin-bottom: 12px;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    h1 {
+      font-size: 26px;
+      font-weight: 800;
+      color: #fff;
+      line-height: 1.25;
+      margin-bottom: 8px;
+      letter-spacing: -0.02em;
+    }
+
+    .subtitle {
+      font-size: 14px;
+      color: var(--text-muted);
+      max-width: 680px;
+      margin: 0 auto;
+    }
+
+    /* Banner for Stripe Checkout Results */
+    .banner-container {
+      display: none;
+      margin-bottom: 24px;
+      padding: 20px;
+      border-radius: var(--radius);
+      animation: fadeIn 0.3s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .banner-success {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(6, 182, 212, 0.1));
+      border: 1px solid var(--primary);
+      color: #ecfdf5;
+    }
+
+    .banner-pending {
+      background: rgba(245, 158, 11, 0.12);
+      border: 1px solid var(--accent-amber);
+      color: #fef3c7;
+    }
+
+    .banner-cancelled {
+      background: rgba(239, 68, 68, 0.12);
+      border: 1px solid var(--accent-red);
+      color: #fee2e2;
+    }
+
+    .key-display-box {
+      margin-top: 14px;
+      background: #020617;
+      padding: 14px;
+      border-radius: var(--radius-sm);
+      border: 1px dashed var(--primary);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .key-token {
+      font-family: var(--font-mono);
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--accent-cyan);
+      word-break: break-all;
+      user-select: all;
+    }
+
+    /* Common Card */
+    .section-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius);
+      padding: 20px;
+      margin-bottom: 24px;
+    }
+
+    .section-title {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #fff;
+    }
+
+    /* Features Grid */
+    .rules-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+      margin-top: 14px;
+    }
+
+    @media (min-width: 600px) {
+      .rules-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    .rule-item {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: var(--radius-sm);
+      padding: 14px;
+    }
+
+    .rule-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--accent-cyan);
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .rule-desc {
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.45;
+    }
+
+    /* Buttons (44px min-height for Gate 4 compliance) */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 44px;
+      padding: 10px 18px;
+      border-radius: var(--radius-sm);
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s;
+      text-decoration: none;
+      user-select: none;
+      width: 100%;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: #022c22;
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-hover);
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text-main);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.15);
+    }
+
+    .btn-cyan {
+      background: var(--accent-cyan);
+      color: #082f49;
+    }
+
+    .btn-cyan:hover {
+      background: #0284c7;
+    }
+
+    /* Pricing Plans */
+    .plans-container {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 14px;
+      margin-top: 16px;
+    }
+
+    @media (min-width: 580px) {
+      .plans-container {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    @media (min-width: 900px) {
+      .plans-container {
+        grid-template-columns: 1fr 1fr 1fr 1fr;
+      }
+    }
+
+    .plan-card {
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius);
+      padding: 20px 16px;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    .plan-card.featured {
+      border-color: var(--primary);
+      box-shadow: 0 0 16px rgba(16, 185, 129, 0.2);
+    }
+
+    .popular-tag {
+      position: absolute;
+      top: -10px;
+      right: 14px;
+      background: var(--primary);
+      color: #022c22;
+      font-size: 10px;
+      font-weight: 800;
+      padding: 2px 8px;
+      border-radius: 9999px;
+      letter-spacing: 0.05em;
+    }
+
+    .plan-name {
+      font-size: 15px;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .plan-price {
+      font-size: 26px;
+      font-weight: 800;
+      color: var(--text-main);
+      margin: 10px 0 4px 0;
+    }
+
+    .plan-price span {
+      font-size: 12px;
+      font-weight: normal;
+      color: var(--text-muted);
+    }
+
+    .plan-features {
+      list-style: none;
+      font-size: 12px;
+      color: var(--text-muted);
+      margin: 12px 0 18px 0;
+      flex-grow: 1;
+    }
+
+    .plan-features li {
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .plan-features li::before {
+      content: "✓";
+      color: var(--primary);
+      font-weight: bold;
+    }
+
+    /* Top-Up Input Field */
+    .topup-field-group {
+      margin-top: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .topup-label {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .topup-input {
+      min-height: 44px;
+      background: #020617;
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-sm);
+      padding: 8px 12px;
+      color: #fff;
+      font-family: var(--font-mono);
+      font-size: 13px;
+      width: 100%;
+    }
+
+    .topup-input:focus {
+      outline: none;
+      border-color: var(--accent-cyan);
+    }
+
+    /* Code Snippet Box */
+    .code-box {
+      background: #020617;
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-sm);
+      padding: 12px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: #e2e8f0;
+      overflow-x: auto;
+      margin-top: 10px;
+      position: relative;
+    }
+
+    .copy-btn-sm {
+      min-height: 36px;
+      padding: 6px 12px;
+      font-size: 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      width: auto;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 8px;
+    }
+
+    /* Live Output Box */
+    .live-output {
+      display: none;
+      margin-top: 14px;
+      background: #020617;
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      border-radius: var(--radius-sm);
+      padding: 14px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      max-height: 240px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    footer {
+      text-align: center;
+      font-size: 12px;
+      color: var(--text-dim);
+      margin-top: 32px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header>
+    <div class="badge-tag">Model Context Protocol Server</div>
+    <h1>Japan Inbound & Cross-Border Rules MCP</h1>
+    <p class="subtitle">
+      Real-time, cross-checked official regulations for international travelers entering and shopping in Japan. 
+      Built for AI Agents, autonomous itinerary assistants, and cross-border platforms.
+    </p>
+  </header>
+
+  <!-- Stripe Checkout Success / Cancelled Banner -->
+  <div id="session-banner" class="banner-container">
+    <div id="banner-content"></div>
+  </div>
+
+  <!-- Verified Regulations Overview -->
+  <div class="section-card">
+    <div class="section-title">
+      <span>🏛️</span>
+      <span>Official & Verified Regulatory Coverage</span>
+    </div>
+    <div class="rules-grid">
+      <div class="rule-item">
+        <div class="rule-title">🛍️ Nov 2026 Tax-Free Shopping Reform</div>
+        <div class="rule-desc">Airport post-departure refund transition, mandatory digital export confirmation, domestic consumption block.</div>
+      </div>
+      <div class="rule-item">
+        <div class="rule-title">🚄 Shinkansen Oversized Baggage</div>
+        <div class="rule-desc">Tokaido/Sanyo/Kyushu rules: mandatory seat reservation for luggage >160cm to 250cm (1,000 JPY penalty if unreserved).</div>
+      </div>
+      <div class="rule-item">
+        <div class="rule-title">🎌 Peak Holiday Rush Risk</div>
+        <div class="rule-desc">Golden Week, Obon, and New Year severe congestion calendar, reserved-only Nozomi trains, hotel surcharge alerts.</div>
+      </div>
+      <div class="rule-item">
+        <div class="rule-title">🛃 Customs & Quarantine Restrictions</div>
+        <div class="rule-desc">Meat product ban (even vacuum-sealed), raw fruit/plant quarantine, 200k JPY duty-free allowance threshold.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Live Free Test (list_jp_rule_categories) -->
+  <div class="section-card">
+    <div class="section-title">
+      <span>⚡</span>
+      <span>Live Interactive Test (Free, 0 JPY)</span>
+    </div>
+    <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">
+      Test the live MCP endpoint directly from your browser. Invokes <code>list_jp_rule_categories</code> with zero authentication required.
+    </p>
+    <button id="btn-try-free" class="btn btn-cyan" onclick="tryFreeCategoryTool()">
+      Try Free Tool (list_jp_rule_categories)
+    </button>
+    <div id="live-output" class="live-output"></div>
+  </div>
+
+  <!-- Pricing & Stripe Checkout -->
+  <div class="section-card">
+    <div class="section-title">
+      <span>💳</span>
+      <span>AI Allowance Plans (Stripe Instant Checkout)</span>
+    </div>
+    <p style="font-size: 13px; color: var(--text-muted);">
+      Automated compliance check (<code>check_jp_travel_compliance</code>) is charged at <strong>30 JPY / call</strong> with hard-limit locks (HTTP 402). 
+      Rule queries and categories (<code>list_jp_rule_categories</code>, <code>query_jp_inbound_rules</code>) are <strong>Free (0 JPY)</strong> with no API key required.
+      Purchase an allowance plan below to receive your instant API Key (<code>sk_souon_...</code>).
+    </p>
+
+    <div class="topup-field-group">
+      <label class="topup-label" for="existing-key">Existing API Key (Optional Top-Up):</label>
+      <input type="text" id="existing-key" class="topup-input" placeholder="sk_souon_... (Leave blank to generate a new key)">
+    </div>
+
+    <div class="plans-container">
+      <!-- Plan 0 (Mini) -->
+      <div class="plan-card">
+        <div class="plan-name">Mini</div>
+        <div class="plan-price">¥100 <span>/ one-time</span></div>
+        <ul class="plan-features">
+          <li>100 JPY Allowance</li>
+          <li>~3 Compliance Checks (30 JPY/ea)</li>
+          <li>Free Rule Lookups (0 JPY)</li>
+          <li>Single-Trip Quick Test</li>
+        </ul>
+        <button class="btn btn-secondary" onclick="startCheckout('mini_100')">Buy Mini (100 JPY)</button>
+      </div>
+
+      <!-- Plan 1 -->
+      <div class="plan-card">
+        <div class="plan-name">Starter</div>
+        <div class="plan-price">¥500 <span>/ one-time</span></div>
+        <ul class="plan-features">
+          <li>500 JPY Allowance</li>
+          <li>~16 Compliance Checks (30 JPY/ea)</li>
+          <li>Free Rule Lookups (0 JPY)</li>
+          <li>Instant API Key Delivery</li>
+        </ul>
+        <button class="btn btn-secondary" onclick="startCheckout('starter_500')">Buy Starter (500 JPY)</button>
+      </div>
+
+      <!-- Plan 2 (Popular) -->
+      <div class="plan-card featured">
+        <div class="popular-tag">MOST POPULAR</div>
+        <div class="plan-name">Standard</div>
+        <div class="plan-price">¥1,500 <span>/ one-time</span></div>
+        <ul class="plan-features">
+          <li>1,500 JPY Allowance</li>
+          <li>50 Compliance Checks (30 JPY/ea)</li>
+          <li>Free Rule Lookups (0 JPY)</li>
+          <li>Hard-Limit Lock Protection</li>
+        </ul>
+        <button class="btn btn-primary" onclick="startCheckout('standard_1500')">Buy Standard (1,500 JPY)</button>
+      </div>
+
+      <!-- Plan 3 -->
+      <div class="plan-card">
+        <div class="plan-name">Pro</div>
+        <div class="plan-price">¥5,000 <span>/ one-time</span></div>
+        <ul class="plan-features">
+          <li>5,000 JPY Allowance</li>
+          <li>~166 Compliance Checks (30 JPY/ea)</li>
+          <li>High-Volume Workflows</li>
+          <li>Priority Support</li>
+        </ul>
+        <button class="btn btn-secondary" onclick="startCheckout('pro_5000')">Buy Pro (5,000 JPY)</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MCP Client Configuration Snippets -->
+  <div class="section-card">
+    <div class="section-title">
+      <span>🔌</span>
+      <span>MCP Client Configuration</span>
+    </div>
+    <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 8px;">
+      Add this server to your Claude Desktop config (<code>claude_desktop_config.json</code>) or Cursor settings:
+    </p>
+
+    <div class="code-box" id="claude-config-code">
+{
+  "mcpServers": {
+    "jp-rules": {
+      "command": "node",
+      "args": ["path/to/server.js"],
+      "env": {
+        "JP_RULES_ONLY": "true"
+      }
+    }
+  }
+}</div>
+    <button class="copy-btn-sm" onclick="copySnippet('claude-config-code')">📋 Copy Claude Config</button>
+
+    <div style="margin-top: 14px;">
+      <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">Remote MCP Endpoint URL:</p>
+      <div class="code-box" id="mcp-endpoint-url">...</div>
+      <button class="copy-btn-sm" onclick="copySnippet('mcp-endpoint-url')">📋 Copy Endpoint URL</button>
+    </div>
+  </div>
+
+  <footer>
+    &copy; 2026 創音知能 (Souon Chino) & Ravy. Zero-npm-dependency Pure Node.js Architecture.
+  </footer>
+
+  <script>
+    // Set dynamic endpoint URL
+    const mcpUrl = window.location.origin + '/mcp';
+    document.getElementById('mcp-endpoint-url').innerText = mcpUrl;
+
+    // Check URL parameters for Stripe Checkout Result
+    window.addEventListener('DOMContentLoaded', () => {
+      const params = new URLSearchParams(window.location.search);
+      const status = params.get('status');
+      const sessionId = params.get('session_id');
+
+      if (status === 'success' && sessionId) {
+        showSuccessBanner(sessionId);
+      } else if (status === 'cancelled') {
+        showCancelledBanner();
+      }
+    });
+
+    // 1. Stripe Checkout Start
+    async function startCheckout(planId) {
+      const existingKeyInput = document.getElementById('existing-key');
+      const apiKey = existingKeyInput ? existingKeyInput.value.trim() : '';
+
+      try {
+        const res = await fetch('/api/billing/checkout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            plan_id: planId,
+            apiKey: apiKey || undefined
+          })
+        });
+
+        const data = await res.json();
+        if (data.success && data.url) {
+          window.location.href = data.url;
+        } else {
+          alert('Checkout initiation failed: ' + (data.message || data.error));
+        }
+      } catch (err) {
+        alert('Error connecting to server: ' + err.message);
+      }
+    }
+
+    // 2. Poll & Display Stripe Session Result
+    async function showSuccessBanner(sessionId) {
+      const banner = document.getElementById('session-banner');
+      const content = document.getElementById('banner-content');
+      banner.className = 'banner-container banner-pending';
+      banner.style.display = 'block';
+
+      content.innerHTML = `
+        <div style="font-weight: 800; font-size: 16px;">⏳ Verifying your Stripe payment...</div>
+        <p style="font-size: 13px; margin-top: 4px;">Retrieving your AI allowance API Key. Please wait a moment...</p>
+      `;
+
+      let retries = 0;
+      const maxRetries = 10;
+      const intervalMs = 1500;
+
+      async function poll() {
+        try {
+          const res = await fetch('/api/billing/session?session_id=' + encodeURIComponent(sessionId));
+          const data = await res.json();
+
+          if (data.success && data.status === 'completed') {
+            banner.className = 'banner-container banner-success';
+            content.innerHTML = `
+              <div style="font-weight: 800; font-size: 18px; color: var(--primary);">
+                🎉 Payment Complete! Your AI Allowance Key is Ready:
+              </div>
+              <p style="font-size: 13px; margin-top: 4px; color: var(--text-muted);">
+                Charged <strong>${data.amount_yen} JPY</strong> (Total Balance: <strong>${data.remaining_yen} JPY</strong>).
+              </p>
+              <div class="key-display-box">
+                <span class="key-token" id="issued-key-text">${data.apiKey}</span>
+                <button class="btn btn-primary" onclick="copyIssuedKey('${data.apiKey}')">
+                  📋 Click to Copy API Key
+                </button>
+              </div>
+              <p style="font-size: 12px; margin-top: 8px; color: var(--accent-amber);">
+                ⚠️ <strong>Important</strong>: Save this API Key securely. Provide it in HTTP <code>Authorization: Bearer sk_souon_...</code> or <code>arguments.apiKey</code>.
+              </p>
+            `;
+            return;
+          }
+
+          if (retries < maxRetries) {
+            retries++;
+            setTimeout(poll, intervalMs);
+          } else {
+            content.innerHTML = `
+              <div style="font-weight: 800; font-size: 16px; color: var(--accent-amber);">⚠️ Webhook Confirmation Pending</div>
+              <p style="font-size: 13px; margin-top: 4px;">Your payment was received by Stripe. The server is still processing the webhook event. Please refresh in a few seconds or check your email.</p>
+            `;
+          }
+        } catch (e) {
+          content.innerHTML = '<p style="color: var(--accent-red);">Failed to fetch session status: ' + e.message + '</p>';
+        }
+      }
+
+      poll();
+    }
+
+    function showCancelledBanner() {
+      const banner = document.getElementById('session-banner');
+      const content = document.getElementById('banner-content');
+      banner.className = 'banner-container banner-cancelled';
+      banner.style.display = 'block';
+      content.innerHTML = `
+        <div style="font-weight: 700; font-size: 15px;">Checkout Cancelled</div>
+        <p style="font-size: 13px; margin-top: 4px;">Your Stripe checkout session was cancelled. You have not been charged.</p>
+      `;
+    }
+
+    function copyIssuedKey(key) {
+      navigator.clipboard.writeText(key).then(() => {
+        alert('API Key copied to clipboard:\n' + key);
+      }).catch(() => {
+        prompt('Copy your API Key:', key);
+      });
+    }
+
+    // 3. Live Free Category Tool Test
+    async function tryFreeCategoryTool() {
+      const btn = document.getElementById('btn-try-free');
+      const output = document.getElementById('live-output');
+      btn.disabled = true;
+      btn.innerText = 'Calling /mcp ...';
+      output.style.display = 'block';
+      output.innerText = 'Connecting to MCP endpoint...';
+
+      try {
+        const res = await fetch('/mcp', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            jsonrpc: "2.0",
+            id: "try_live_categories_" + Date.now(),
+            method: "tools/call",
+            params: {
+              name: "list_jp_rule_categories",
+              arguments: {}
+            }
+          })
+        });
+
+        const data = await res.json();
+        output.innerText = JSON.stringify(data, null, 2);
+      } catch (err) {
+        output.innerText = 'Error calling MCP: ' + err.message;
+      } finally {
+        btn.disabled = false;
+        btn.innerText = 'Try Free Tool (list_jp_rule_categories)';
+      }
+    }
+
+    function copySnippet(elementId) {
+      const text = document.getElementById(elementId).innerText;
+      navigator.clipboard.writeText(text).then(() => {
+        alert('Copied to clipboard!');
+      }).catch(() => {
+        prompt('Copy snippet:', text);
+      });
+    }
+  </script>
+</body>
+</html>

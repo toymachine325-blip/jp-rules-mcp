@@ -1,0 +1,27 @@
+{
+  "$schema": "https://glama.ai/mcp/schemas/server.json",
+  "name": "jp-rules-mcp",
+  "title": "Japan Inbound & Cross-Border Rules MCP",
+  "description": "Official, verified Japan inbound travel and cross-border regulatory rules for AI Agents (Tax-Free Reform Nov 2026, Shinkansen Luggage, Customs).",
+  "type": "mcp_server",
+  "status": "production",
+  "maintainers": [
+    "toymachine325-blip"
+  ],
+  "transport": [
+    "http"
+  ],
+  "homepage": "https://jp-rules-mcp.onrender.com",
+  "repository": "https://github.com/toymachine325-blip/jp-rules-mcp",
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "japan",
+    "inbound-travel",
+    "tax-free",
+    "shinkansen",
+    "customs",
+    "compliance",
+    "streamable-http"
+  ]
+}

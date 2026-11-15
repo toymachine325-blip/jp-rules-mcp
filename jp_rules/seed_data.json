@@ -1,0 +1,168 @@
+{
+  "system": "Japan Inbound & Cross-Border Rules Knowledge Base",
+  "version": "1.0.0",
+  "language": "en",
+  "last_verified_at": "2026-11-01T00:00:00Z",
+  "categories": {
+    "tax_free": {
+      "id": "tax_free",
+      "name": "Japan Tax-Free Shopping Rules (Effective Nov 1, 2026)",
+      "description": "Official Japanese tax-free shopping regulations for foreign tourists, updated for the Nov 1, 2026 customs reform.",
+      "last_verified_at": "2026-11-01T00:00:00Z",
+      "rules": [
+        {
+          "id": "tax_free_general",
+          "title": "Tax-Free Shopping Eligibility and Departure Customs Confirmation (Nov 2026 Reform)",
+          "min_jpy_ex_tax": 5000,
+          "refund_method": "post_departure_customs_confirmation",
+          "consumables_cap_abolished": true,
+          "sealed_bag_required": false,
+          "departure_deadline_days": 90,
+          "high_value_inspection_jpy": 1000000,
+          "effective_date": "2026-11-01",
+          "official_sources": [
+            "https://www.nta.go.jp/publication/pamph/shohi/menzei/index.htm",
+            "https://www.mlit.go.jp/kankocho/en/page02_000001_00002.html"
+          ],
+          "summary": "Under the reform effective November 1, 2026, foreign visitors pay consumption tax upfront at stores and receive refunds at airport customs after departure confirmation. The previous 500,000 JPY cap on consumable goods is abolished, and specialized sealed plastic bags are no longer required for domestic transport. Goods must be taken out of Japan within 90 days of purchase. Purchases of 1,000,000 JPY or more trigger mandatory physical item inspection at airport customs."
+        }
+      ]
+    },
+    "rail_luggage": {
+      "id": "rail_luggage",
+      "name": "Shinkansen Oversized Baggage Regulations",
+      "description": "Rules for carrying baggage on Tokaido, Sanyo, and Kyushu Shinkansen bullet trains operated by JR Central, JR West, and JR Kyushu.",
+      "last_verified_at": "2026-11-01T00:00:00Z",
+      "rules": [
+        {
+          "id": "shinkansen_baggage_limits",
+          "title": "Dimensions, Reservation Requirements, and Penalties",
+          "standard_max_total_cm": 160,
+          "oversized_min_total_cm": 161,
+          "oversized_max_total_cm": 250,
+          "prohibited_min_total_cm": 251,
+          "unreserved_penalty_jpy": 1000,
+          "max_weight_kg": 30,
+          "max_pieces": 2,
+          "official_sources": [
+            "https://railway.jr-central.co.jp/oversized-baggage/",
+            "https://www.westjr.co.jp/global/en/luggage/"
+          ],
+          "summary": "Baggage with total dimensions (length + width + height) up to 160 cm does not require reservation. Baggage between 161 cm and 250 cm requires a seat with an oversized baggage area reserved in advance at no extra seat fee. If brought onboard without prior reservation, an unreserved penalty fee of 1,000 JPY (including tax) is charged and the luggage will be relocated to a conductor-designated area. Baggage exceeding 250 cm or 30 kg is not permitted onboard."
+        }
+      ]
+    },
+    "holidays": {
+      "id": "holidays",
+      "name": "Japan Public Holidays and Peak Travel Seasons",
+      "description": "Calendar of Japanese national holidays and major congestion periods when domestic transportation and hotels experience peak demand.",
+      "last_verified_at": "2026-11-01T00:00:00Z",
+      "peak_periods": [
+        {
+          "id": "golden_week",
+          "name": "Golden Week",
+          "start_date": "04-29",
+          "end_date": "05-05",
+          "risk_level": "high",
+          "description": "Consecutive national holidays causing extreme travel congestion across Japan."
+        },
+        {
+          "id": "obon",
+          "name": "Obon Festival Season",
+          "start_date": "08-13",
+          "end_date": "08-16",
+          "risk_level": "high",
+          "description": "Traditional Buddhist ancestor honoring period; peak domestic homecoming and vacation traffic."
+        },
+        {
+          "id": "year_end_new_year",
+          "name": "Year-End and New Year",
+          "start_date": "12-29",
+          "end_date": "01-03",
+          "risk_level": "high",
+          "description": "Major annual shutdown; Shinkansen trains often operate with reserved-only Nozomi services."
+        }
+      ],
+      "national_holidays": [
+        { "date": "01-01", "name": "New Year's Day" },
+        { "date": "01-12", "name": "Coming of Age Day" },
+        { "date": "02-11", "name": "National Foundation Day" },
+        { "date": "02-23", "name": "Emperor's Birthday" },
+        { "date": "03-20", "name": "Vernal Equinox Day" },
+        { "date": "04-29", "name": "Showa Day" },
+        { "date": "05-03", "name": "Constitution Memorial Day" },
+        { "date": "05-04", "name": "Greenery Day" },
+        { "date": "05-05", "name": "Children's Day" },
+        { "date": "07-20", "name": "Marine Day" },
+        { "date": "08-11", "name": "Mountain Day" },
+        { "date": "09-21", "name": "Respect for the Aged Day" },
+        { "date": "09-23", "name": "Autumnal Equinox Day" },
+        { "date": "10-12", "name": "Sports Day" },
+        { "date": "11-03", "name": "Culture Day" },
+        { "date": "11-23", "name": "Labor Thanksgiving Day" }
+      ],
+      "rules": [
+        {
+          "id": "peak_season_guidance",
+          "title": "Travel Rush Periods and Shinkansen Advance Booking",
+          "golden_week": "Apr 29 - May 5",
+          "obon": "Aug 13 - Aug 16",
+          "year_end_new_year": "Dec 29 - Jan 3",
+          "official_sources": [
+            "https://www8.cao.go.jp/chosei/shukujitsu/gaiyou.html",
+            "https://www.japan.travel/en/"
+          ],
+          "summary": "During Golden Week (Apr 29 - May 5), Obon (Aug 13 - Aug 16), and Year-End/New Year (Dec 29 - Jan 3), transportation hubs, bullet trains, and accommodations operate at maximum capacity. Nozomi Shinkansen trains frequently switch to all-reserved seating with no unreserved cars."
+        }
+      ]
+    },
+    "customs": {
+      "id": "customs",
+      "name": "Japan Customs & Quarantine Border Restrictions",
+      "description": "Import restrictions, quarantine bans, and declaration thresholds for entering Japan.",
+      "last_verified_at": "2026-11-01T00:00:00Z",
+      "rules": [
+        {
+          "id": "meat_plant_ban",
+          "title": "Strict Ban on Meat Products and Unauthorized Plant Quarantine Items",
+          "meat_products": "strictly_prohibited",
+          "plant_quarantine": "inspection_certificate_required",
+          "penalty_fine_max_jpy": 3000000,
+          "penalty_imprisonment_max_years": 3,
+          "official_sources": [
+            "https://www.maff.go.jp/aqs/english/product/import.html",
+            "https://www.customs.go.jp/english/"
+          ],
+          "summary": "Bringing meat products (beef, pork, poultry, sausages, jerky, etc.) into Japan without an animal quarantine inspection certificate is strictly prohibited by law. Violations may result in fines up to 3,000,000 JPY or imprisonment up to 3 years."
+        },
+        {
+          "id": "cash_currency_threshold",
+          "title": "Cash and Currency Declaration Threshold",
+          "cash_declaration_threshold_jpy": 1000000,
+          "applies_to": [
+            "cash",
+            "checks",
+            "promissory_notes",
+            "traveler_checks",
+            "precious_metals_over_1kg"
+          ],
+          "official_sources": [
+            "https://www.customs.go.jp/english/summary/passenger.htm"
+          ],
+          "summary": "Travelers carrying cash, checks, promissory notes, traveler's checks, or securities exceeding 1,000,000 JPY (or equivalent in foreign currencies) or precious metals exceeding 1 kg must declare them to Japan Customs upon arrival and departure."
+        },
+        {
+          "id": "medication_limit",
+          "title": "Personal Prescription Medication Allowances",
+          "prescription_med_limit_months": 1,
+          "narcotics_psychotropics": "special_advance_permission_required",
+          "yakkan_shoumei_required": "for supplies exceeding 1 month or injectable medicine",
+          "official_sources": [
+            "https://www.mhlw.go.jp/english/policy/health-medical/pharmaceuticals/01.html"
+          ],
+          "summary": "Travelers may bring up to a 1-month supply of prescription medication for personal use without special import certificate. Quantities exceeding 1 month or injectable medicines require advance import certificate (Yakkan Shoumei) issued by the Ministry of Health, Labour and Welfare."
+        }
+      ]
+    }
+  }
+}

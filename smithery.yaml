@@ -1,0 +1,20 @@
+# -------------------------------------------------------------
+# Smithery Configuration for Japan Inbound & Cross-Border Rules MCP
+# -------------------------------------------------------------
+startCommand:
+  type: http
+  url: "https://jp-rules-mcp.onrender.com/mcp"
+
+configSchema:
+  type: object
+  properties:
+    apiKey:
+      type: string
+      title: "Souon AI Allowance API Key"
+      description: "Optional API Key (sk_souon_...) for compliance checks (check_jp_travel_compliance at 30 JPY/call). Rule lookup tools (list_jp_rule_categories & query_jp_inbound_rules) are free (0 JPY) without a key. Instant key delivery & card top-up available at https://jp-rules-mcp.onrender.com"
+      x-from:
+        header: "x-api-key"
+  required: []
+
+exampleConfig:
+  apiKey: "sk_souon_example_allowance_key"

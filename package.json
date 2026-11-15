@@ -1,0 +1,30 @@
+{
+  "name": "souon-ai-micro-store",
+  "version": "1.0.0",
+  "description": "Japan Inbound & Cross-Border Rules MCP & AI Micro Store - Verified official regulatory rules and digital assets for AI Agents with micro-allowance billing",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node test_store.js",
+    "test:billing": "node test_billing_deploy.js",
+    "test:rules": "node test_jp_rules_mcp.js"
+  },
+  "homepage": "https://jp-rules-mcp.onrender.com",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/toymachine325-blip/jp-rules-mcp.git"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "japan",
+    "inbound-travel",
+    "tax-free",
+    "shinkansen",
+    "compliance",
+    "streamable-http"
+  ],
+  "author": "創音知能 (Souon Chino)",
+  "license": "MIT",
+  "dependencies": {}
+}

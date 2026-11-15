@@ -1,0 +1,24 @@
+# -------------------------------------------------------------
+# Render.com Blueprint for Souon AI Micro Store & JP Rules MCP
+# -------------------------------------------------------------
+services:
+  - type: web
+    name: jp-rules-mcp
+    runtime: node
+    plan: free
+    region: oregon
+    rootDir: ai_micro_store
+    buildCommand: "echo 'Zero dependencies: ready to run'"
+    startCommand: "node server.js"
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3456
+      - key: JP_RULES_ONLY
+        value: "true"
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
