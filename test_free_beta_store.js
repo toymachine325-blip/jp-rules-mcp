@@ -323,6 +323,48 @@ const parseToolText = (res) => JSON.parse(res.body.result.content[0].text);
       assert.strictEqual(normal.body.toolsCount - freeCount, 2, "使い捨てメール2つぶんだけ少ないはず");
     });
     // -------------------------------------------------------
+    // 使い捨てメールは「お金がかかるので一旦見送り」。受信ドメインが無い間は、道具・デモ・画面のどこにも出さない。
+    await runTest("15. 使い捨てメール見送り: 無料ベータ（受信ドメインなし）では /health が temp_mail:false、デモは 404、トップ画面のバナーは初期非表示であること", async () => {
+      setEnv({ JP_RULES_FREE_BETA: 'true' });
+      const t = makeServer();
+      const health = await t.call({ url: '/health' });
+      assert.strictEqual(health.body.temp_mail, false);
+
+      const demo = await t.call({
+        method: 'POST', url: '/api/demo/temp-mail',
+        headers: { 'Content-Type': 'application/json', 'x-forwarded-for': '198.51.100.30' },
+        body: {}
+      });
+      assert.strictEqual(demo.statusCode, 404);
+      assert.strictEqual(demo.body.error, 'NOT_AVAILABLE');
+
+      const create = await t.call(toolCall('create_temp_inbox', {}));
+      assert.strictEqual(create.statusCode, 200);
+      // 道具一覧に無いので、呼んでも使えない（集計では (unknown) 扱い）
+      assert.ok(t.usage.getSummary().totals.calls['tools/call:(unknown)'] >= 1 || create.body.result?.isError === true || create.body.error);
+
+      const top = await t.call({ url: '/' });
+      assert.ok(top.rawBody.includes('id="tempMailBanner"'));
+      assert.ok(/id="tempMailBanner"[^>]*style="display: none;/.test(top.rawBody), "バナーが初期表示になっている");
+    });
+
+    await runTest("16. 受信ドメイン(TEMP_MAIL_DOMAIN)を設定するか無料ベータをやめると、使い捨てメールが /health・デモで再び有効になること", async () => {
+      setEnv({ JP_RULES_FREE_BETA: 'true', TEMP_MAIL_DOMAIN: 'mail.example.test' });
+      let t = makeServer();
+      assert.strictEqual((await t.call({ url: '/health' })).body.temp_mail, true);
+
+      setEnv({});
+      t = makeServer();
+      assert.strictEqual((await t.call({ url: '/health' })).body.temp_mail, true);
+      const demo = await t.call({
+        method: 'POST', url: '/api/demo/temp-mail',
+        headers: { 'Content-Type': 'application/json', 'x-forwarded-for': '198.51.100.31' },
+        body: {}
+      });
+      assert.notStrictEqual(demo.statusCode, 404);
+    });
+
+    // -------------------------------------------------------
     // 本物の HTTP（実際に待ち受けて fetch する）で確認する。
     // 上のテストは本物の通信を使わないので、HTTP ヘッダーの文字種エラーなどは見つけられない。
     await runTest("14. 日本語タイトルの PDF / OGP が、本物の HTTP でもダウンロードできること（Content-Disposition が壊れない）", async () => {

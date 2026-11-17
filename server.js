@@ -10,7 +10,7 @@ const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
 const { StoreManager } = require('./store');
-const { createMcpHandler, getAvailableTools, isRockTypoAvailable } = require('./mcp');
+const { createMcpHandler, getAvailableTools, isRockTypoAvailable, isTempMailPublic } = require('./mcp');
 // 利用集計は付け足しの機能。ファイルが同梱されていないビルド（jp-rules 専用の Dockerfile など）でも
 // サーバーが起動できるよう、読み込めないときは何もしない集計器に差し替える。
 let UsageStats;
@@ -424,6 +424,7 @@ function createStoreServer(options = {}) {
           mode,
           toolsCount: tools.length,
           free_beta: process.env.JP_RULES_FREE_BETA === 'true',
+          temp_mail: isTempMailPublic(),
           storage: storeManager.isRemoteEnabled() ? 'supabase' : 'local_json',
           timestamp: new Date().toISOString()
         });
@@ -706,6 +707,15 @@ function createStoreServer(options = {}) {
 
         // 1-4-3. 使い捨てメール＆OTP抽出デモ (POST /api/demo/temp-mail)
         if (pathname === '/api/demo/temp-mail') {
+          // 受信ドメインが未設定の無料ベータでは公開しない
+          if (!isTempMailPublic()) {
+            sendJson(res, 404, {
+              success: false,
+              error: "NOT_AVAILABLE",
+              message: "The disposable-mail demo is not available yet."
+            });
+            return;
+          }
           const tempMailMgr = typeof storeManager.getTempMailManager === 'function' ? storeManager.getTempMailManager() : null;
           if (!tempMailMgr) {
             sendJson(res, 503, {

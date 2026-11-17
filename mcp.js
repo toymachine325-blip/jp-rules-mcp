@@ -500,6 +500,12 @@ function isFreeStoreMode() {
   return isFreeBetaMode() && process.env.JP_RULES_ONLY !== 'true';
 }
 
+// 使い捨てメールを公開してよいか。無料ベータでは「実際にメールを受け取れるドメイン」
+// (TEMP_MAIL_DOMAIN) を設定するまで公開しない（受け取れないアドレスを配ってしまうため）。
+function isTempMailPublic() {
+  return !isFreeStoreMode() || Boolean(process.env.TEMP_MAIL_DOMAIN);
+}
+
 // 無料ベータ中の「課金したことにする」ダミー（残高は動かさない・保存もしない）
 function makeFreeCharge() {
   return {
@@ -573,9 +579,8 @@ function getAvailableTools() {
   tools.push(freeStore ? freeBetaVariant(TOOL_GENERATE_OGP_IMAGE) : TOOL_GENERATE_OGP_IMAGE);
 
   // 使い捨てメール受信＆OTP抽出ツール (通常モード)
-  // 使い捨てメールは「実際にメールを受け取れるドメイン」(TEMP_MAIL_DOMAIN) が設定されるまで、
-  // 無料ベータでは公開しない（受け取れないアドレスを配ってしまうため）
-  if (!freeStore || process.env.TEMP_MAIL_DOMAIN) {
+  // 使い捨てメールは受信ドメインが設定されるまで無料ベータでは公開しない
+  if (isTempMailPublic()) {
     tools.push(TOOL_CREATE_TEMP_INBOX);
     tools.push(TOOL_READ_TEMP_INBOX);
   }
@@ -1959,5 +1964,6 @@ function createMcpHandler(storeManager) {
 module.exports = {
   createMcpHandler,
   getAvailableTools,
-  isRockTypoAvailable
+  isRockTypoAvailable,
+  isTempMailPublic
 };

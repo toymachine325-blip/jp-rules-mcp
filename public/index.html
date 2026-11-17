@@ -859,7 +859,7 @@
     </div>
 
     <!-- 新機能：使い捨てメール受信＆OTP抽出 MCP ツール紹介＆無料ライブデモ (Gate 4 スマホ基準) -->
-    <div class="temp-mail-banner" style="background: linear-gradient(135deg, rgba(15, 23, 42, 0.8), rgba(30, 27, 75, 0.9)); border: 1.5px solid #818cf8; border-radius: var(--radius-sm); padding: 18px; margin-top: 16px;">
+    <div id="tempMailBanner" class="temp-mail-banner" style="display: none; background: linear-gradient(135deg, rgba(15, 23, 42, 0.8), rgba(30, 27, 75, 0.9)); border: 1.5px solid #818cf8; border-radius: var(--radius-sm); padding: 18px; margin-top: 16px;">
       <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-bottom: 8px;">
         <span class="product-tag" style="background: rgba(129, 140, 248, 0.2); color: #818cf8; border: 1px solid #818cf8;">NEW • MCP Tool</span>
         <span style="font-size: 18px; font-weight: 800; color: #fff;">発行 10<span style="font-size: 12px; color: var(--text-muted);"> 円 / 照会 0 円</span></span>
@@ -972,6 +972,12 @@
 
     // 初期化
     window.addEventListener('DOMContentLoaded', () => {
+      // 使い捨てメールは、サーバーが公開OKと答えたときだけ表示する（受信ドメイン未設定の間は非表示）
+      fetch('/health').then(r => r.json()).then(h => {
+        const banner = document.getElementById('tempMailBanner');
+        if (banner && h && h.temp_mail === true) banner.style.display = '';
+      }).catch(() => {});
+
       dom.agentName.value = currentAgentName;
       initPresets();
       if (currentApiKey) {
