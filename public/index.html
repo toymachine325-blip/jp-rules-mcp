@@ -722,7 +722,7 @@
       </div>
 
       <!-- 2. タイポJSON -->
-      <div class="product-card" data-product-id="rocktypo-motion-json">
+      <div class="product-card" data-product-id="rocktypo-motion-json" data-held-back="true" style="display: none;">
         <div>
           <div class="product-tag tag-json">Motion / JSON</div>
           <div class="product-title">キレキレタイポモーション設定JSON</div>
@@ -972,6 +972,15 @@
 
     // 初期化
     window.addEventListener('DOMContentLoaded', () => {
+      // 公開を見送っている商品（data-held-back）は、サーバーの商品一覧に載っているときだけ表示する
+      fetch('/api/products').then(r => r.json()).then(p => {
+        const list = p && Array.isArray(p.products) ? p.products : null;
+        if (!list) return;
+        const ids = new Set(list.map(x => x.id));
+        document.querySelectorAll('.product-card[data-held-back]').forEach(el => {
+          if (ids.has(el.getAttribute('data-product-id'))) el.style.display = '';
+        });
+      }).catch(() => {});
       // 使い捨てメールは、サーバーが公開OKと答えたときだけ表示する（受信ドメイン未設定の間は非表示）
       fetch('/health').then(r => r.json()).then(h => {
         const banner = document.getElementById('tempMailBanner');

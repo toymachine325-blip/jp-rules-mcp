@@ -525,6 +525,10 @@ function chargeOrFree(storeManager, apiKey, amountYen, info) {
 // 無料ベータ用の説明に差し替えた道具定義（元の定義は書き換えない）
 function freeBetaVariant(tool) {
   const props = { ...(tool.inputSchema.properties || {}) };
+  if (props.productId && typeof props.productId.description === 'string') {
+    // 公開を見送っている商品の名前は、説明からも消す
+    props.productId = { ...props.productId, description: props.productId.description.replace(', rocktypo-motion-json', '') };
+  }
   if (props.apiKey) {
     props.apiKey = {
       type: "string",

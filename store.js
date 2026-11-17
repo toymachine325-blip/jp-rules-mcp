@@ -9,6 +9,14 @@ const path = require('path');
 const crypto = require('crypto');
 
 // 非JP商品生成モジュールの遅延・安全ロード（スタンドアロンJP Rules環境でのファイル未配置クラッシュ防止）
+// 完成まで公開しない商品（無料ベータの公開サーバーでだけ隠す。通常モードの販売には影響しない）
+const HELD_BACK_PRODUCT_IDS = new Set(['rocktypo-motion-json']);
+function isHeldBackProduct(id) {
+  return process.env.JP_RULES_FREE_BETA === 'true' &&
+    process.env.JP_RULES_ONLY !== 'true' &&
+    HELD_BACK_PRODUCT_IDS.has(id);
+}
+
 let drumsMidiModule = null;
 function getDrumsMidi() {
   if (!drumsMidiModule && process.env.JP_RULES_ONLY !== 'true') {
@@ -370,7 +378,7 @@ class StoreManager {
   // --- 商品関連 ---
   getProducts() {
     const data = this.load();
-    return data.products || [];
+    return (data.products || []).filter(p => !isHeldBackProduct(p.id));
   }
 
   getProductById(id) {
@@ -701,7 +709,7 @@ class StoreManager {
   purchaseFree(productId, params = {}) {
     const data = this.load();
     const product = (data.products || []).find(p => p.id === productId);
-    if (!product) {
+    if (!product || isHeldBackProduct(product.id)) {
       const err = new Error(`Product not found: ${productId}`);
       err.statusCode = 404;
       err.code = "PRODUCT_NOT_FOUND";

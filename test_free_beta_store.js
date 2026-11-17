@@ -201,13 +201,9 @@ const parseToolText = (res) => JSON.parse(res.body.result.content[0].text);
       assert.strictEqual(dl.rawBuffer.slice(0, 4).toString('ascii'), 'MThd');
     });
 
-    await runTest("07. 商品購入: 他の商品（モーションJSON・プロンプト集）もキーなしで取れ、存在しない商品は 404 相当のエラーになること", async () => {
+    await runTest("07. 商品購入: プロンプト集もキーなしで取れ、存在しない商品は 404 相当のエラーになること", async () => {
       setEnv({ JP_RULES_FREE_BETA: 'true' });
       const t = makeServer();
-      const motion = await t.call(toolCall('purchase_product', { productId: 'rocktypo-motion-json', params: { lyrics: ['無料', 'ベータ'] } }));
-      assert.ok(!motion.body.result.isError, motion.rawBody);
-      assert.strictEqual(parseToolText(motion).free_beta, true);
-
       const prompts = await t.call(toolCall('purchase_product', { productId: 'cyber-comic-prompts' }));
       assert.ok(!prompts.body.result.isError, prompts.rawBody);
 
@@ -362,6 +358,47 @@ const parseToolText = (res) => JSON.parse(res.body.result.content[0].text);
         body: {}
       });
       assert.notStrictEqual(demo.statusCode, 404);
+    });
+
+    // -------------------------------------------------------
+    // ロックタイポ関連の商品（モーションJSON）は、ロックタイポ完成まで公開しない
+    await runTest("17. ロックタイポ モーションJSON は無料ベータの公開では、商品一覧・購入（MCP/HTTP）・道具の説明・画面のどこにも出ないこと", async () => {
+      setEnv({ JP_RULES_FREE_BETA: 'true' });
+      const t = makeServer();
+      const ID = 'rocktypo-motion-json';
+
+      const list = await t.call(toolCall('list_products', {}));
+      assert.ok(!list.rawBody.includes(ID), "list_products に出ている");
+      assert.ok(list.rawBody.includes('drums-8beat-midi'), "他の商品まで消えている");
+
+      const api = await t.call({ url: '/api/products' });
+      assert.ok(!api.body.products.some(p => p.id === ID), "/api/products に出ている");
+      assert.ok(api.body.products.some(p => p.id === 'drums-8beat-midi'));
+
+      const buy = await t.call(toolCall('purchase_product', { productId: ID }));
+      assert.strictEqual(buy.body.result.isError, true);
+      assert.strictEqual(parseToolText(buy).error, 'PRODUCT_NOT_FOUND');
+
+      const http = await t.call({
+        method: 'POST', url: '/api/purchase',
+        headers: { 'Content-Type': 'application/json' },
+        body: { product_id: ID }
+      });
+      assert.strictEqual(http.statusCode, 404);
+
+      const tools = await t.call({ method: 'POST', url: '/mcp', headers: { 'Content-Type': 'application/json', 'x-forwarded-for': '198.51.100.40' }, body: rpc('tools/list', {}) });
+      const buyTool = tools.body.result.tools.find(x => x.name === 'purchase_product');
+      assert.ok(!JSON.stringify(buyTool).includes(ID), "道具の説明に名前が残っている");
+
+      const top = await t.call({ url: '/' });
+      assert.ok(/data-product-id="rocktypo-motion-json" data-held-back="true" style="display: none;"/.test(top.rawBody), "画面のカードが初期非表示でない");
+    });
+
+    await runTest("18. 通常モード（無料ベータでない）では、モーションJSON は従来どおり商品一覧に載り、購入できること", async () => {
+      setEnv({});
+      const t = makeServer();
+      const api = await t.call({ url: '/api/products' });
+      assert.ok(api.body.products.some(p => p.id === 'rocktypo-motion-json'));
     });
 
     // -------------------------------------------------------

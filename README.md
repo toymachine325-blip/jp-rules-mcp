@@ -41,7 +41,7 @@ When `JP_RULES_ONLY=false` and `JP_RULES_FREE_BETA=true`, the whole store is fre
 | :--- | :--- |
 | `generate_beautiful_pdf` | Markdown → clean PDF (Japanese & English) |
 | `generate_ogp_image` | Title → OGP / thumbnail PNG |
-| `purchase_product` | Drum MIDI, motion JSON, prompt pack |
+| `purchase_product` | Drum MIDI, prompt pack |
 | `list_products` | List the above |
 
 The disposable-mail tools are held back until a real receiving domain is configured (`TEMP_MAIL_DOMAIN`).
