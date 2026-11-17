@@ -1,0 +1,90 @@
+{
+  "product_id": "cyber-comic-prompts",
+  "title": "サイバー・コミック風MV プロンプト完全攻略テンプレート集",
+  "version": "1.0.0",
+  "recommended_engines": [
+    "Midjourney v6.1",
+    "ComfyUI (SDXL + Comic Lora)",
+    "Runway Gen-3 Alpha",
+    "Kling AI",
+    "Luma Dream Machine"
+  ],
+  "visual_dna": {
+    "style": "Cyber Comic Art style, dynamic chromatic aberration, halftone dots texture, risograph print texture, high-contrast neon lighting, kinetic smear frames, hand-drawn 2D/3D hybrid animation",
+    "aspect_ratio": "9:16 or 16:9",
+    "lighting": "Split lighting, neon cyan (#00f0ff) and magenta (#ff0055) rim lights, deep black shadows, volumetric emission rays",
+    "framerate_note": "Render on 12fps (on-twos animation) for classic comic book rhythm"
+  },
+  "scenes": [
+    {
+      "scene_num": 1,
+      "name": "オープニング・路地裏の雷光",
+      "concept": "雨に濡れたネオン街、フードを被ったギターヒーローの足元から閃光が走る",
+      "prompt_midjourney": "Cinematic low-angle close up of high-top sneakers hitting wet asphalt, neon reflections in puddles, cyan electric sparks dancing, Cyber Comic Art style, bold comic ink outlines, halftone dot shading, dynamic action angle, 8k resolution --ar 9:16 --v 6.1 --stylize 350",
+      "prompt_video": "Slow camera push-in towards futuristic sneakers splashing into wet puddle reflecting neon signs, sudden electric spark explodes into comic book onomatopoeia, camera shakes on beat"
+    },
+    {
+      "scene_num": 2,
+      "name": "覚醒・歪むグリッチ空間",
+      "concept": "主人公がアコギ/エレキを構え、空間が次元グリッチとともに崩壊・再構築される",
+      "prompt_midjourney": "Young rock musician holding an electric acoustic guitar, silhouette against blinding neon grid, dimension glitch tearing the reality into comic book panels, halftone printing defect, Ben-Day dots, chromatic aberration, vibrant magenta and electric yellow --ar 9:16 --v 6.1 --chaos 20",
+      "prompt_video": "Protagonist swings guitar upward, air ripples with dimensional tear effect, world splits into 3 offset RGB layers then snaps back forcefully"
+    },
+    {
+      "scene_num": 3,
+      "name": "超高速カッティング・ソロ",
+      "concept": "指先から放たれる稲妻とピックの残像",
+      "prompt_midjourney": "Extreme macro shot of fingers fretting guitar neck at impossible speed, multi-frame smear lines, glowing neon pick, comic book sound effect typography floating 'ZKKK', ink splatter, gritty texture, masterpiece --ar 9:16 --v 6.1",
+      "prompt_video": "Macro tracking shot along guitar strings vibrating violently, comic smear frames showing ghost hands, speed lines converging towards center"
+    },
+    {
+      "scene_num": 4,
+      "name": "ビル群ダイブ・無重力フォール",
+      "concept": "超高層ビルの間を逆さまに落下しながら演奏するアイコニックな構図",
+      "prompt_midjourney": "Upside-down heroic leap between skyscraper canyons of cyberpunk neo-Tokyo, protagonist falling while strumming neon guitar, trailing glowing comic graffiti ribbons, deep purple night sky, halftone sky gradient --ar 9:16 --v 6.1",
+      "prompt_video": "Inverted camera diving down along with the guitarist, neon billboards rushing past, effortless rotation mid-air to face camera with fearless smile"
+    },
+    {
+      "scene_num": 5,
+      "name": "ドラムビート・衝撃波グリッド",
+      "concept": "ドラムのキックとスネアが地面に叩きつけられるたびに衝撃波が街を走る",
+      "prompt_midjourney": "Drummer hitting snare drum with immense energy, shockwave expanding as stylized 2D graphic rings, comic impact lines, dust and neon sparks burst, dynamic fish-eye lens perspective, graphic novel style --ar 9:16 --v 6.1",
+      "prompt_video": "Snare stick hits drum head, time briefly freezes on contact frame with sketch-line flash, then explodes outward into shockwave ripple across neon street"
+    },
+    {
+      "scene_num": 6,
+      "name": "タイポグラフィ・リリック爆発",
+      "concept": "歌詞の文字が物理的な凶器のように空間を突き破る",
+      "prompt_midjourney": "Explosion of 3D brutalist typography letters bursting through neon glass, shards of glass reflecting comic book colors, heavy halftone overlay, dynamic pop-art composition, vibrant cyan and crimson --ar 9:16 --v 6.1",
+      "prompt_video": "Massive 3D letters shatter camera lens, camera whip-pans through floating glyphs, glitch artifacts flicker between frames"
+    },
+    {
+      "scene_num": 7,
+      "name": "分身・マルチバースセッション",
+      "concept": "色彩の異なる複数の自分（赤青、モノクロ、パステル）が同時にバンド演奏",
+      "prompt_midjourney": "Three alternate versions of same rock guitarist jamming together: one punk cyber, one noir ink sketch, one 80s anime cel shaded, merging in a chaotic multidimensional jam session, Cyber Comic glitch style --ar 9:16 --v 6.1",
+      "prompt_video": "Split screen panels rapidly slide in from different angles, showing 3 versions in perfect sync playing the same power chord"
+    },
+    {
+      "scene_num": 8,
+      "name": "感情の爆発・スローモーション眼光",
+      "concept": "サビ直前、キャラクターの瞳の中に宇宙とネオンが宿るクローズアップ",
+      "prompt_midjourney": "Intense close-up on musician's eyes under hoodie, eyes glowing with neon turquoise flame, dripping sweat rendered as sparkling stars, comic book crosshatch shading, emotional peak expression --ar 9:16 --v 6.1",
+      "prompt_video": "Ultra slow motion breathing, neon light reflects across pupil, iris pulses with equalizer waves, sudden snap to reality"
+    },
+    {
+      "scene_num": 9,
+      "name": "クライマックス・ステージ昇華",
+      "concept": "演奏が最高潮に達し、街全体が音楽の光に包まれて浮遊する",
+      "prompt_midjourney": "Full band performing on rooftop edge, entire cyberpunk city illuminated by colossal sonic aurora, ink splatters blending with stars, Cyber Comic risograph print, high fashion cyberpunk outfits --ar 9:16 --v 6.1",
+      "prompt_video": "Sweeping 360-degree drone orbit around the band playing furiously on high-rise spire, city below pulsing to the rhythm"
+    },
+    {
+      "scene_num": 10,
+      "name": "エンディング・グラフィティ定着",
+      "concept": "最後の一撃とともに、画面全体が1枚のストリートアート壁画へと固着する",
+      "prompt_midjourney": "Final hero pose with guitar raised to the sky, frozen mid-motion as colorful stencil spray graffiti on brick wall, neon spray paint drips, halftone texture, museum quality graphic art --ar 9:16 --v 6.1",
+      "prompt_video": "Last power chord echoes, 3D character instantly flattens into 2D spray paint graffiti on brick wall, spray paint drips down slightly"
+    }
+  ]
+}

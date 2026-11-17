@@ -8,8 +8,27 @@ const http = require('http');
 const url = require('url');
 const path = require('path');
 const fs = require('fs');
+const crypto = require('crypto');
 const { StoreManager } = require('./store');
 const { createMcpHandler, getAvailableTools, isRockTypoAvailable } = require('./mcp');
+// 利用集計は付け足しの機能。ファイルが同梱されていないビルド（jp-rules 専用の Dockerfile など）でも
+// サーバーが起動できるよう、読み込めないときは何もしない集計器に差し替える。
+let UsageStats;
+try {
+  ({ UsageStats } = require('./usage_stats'));
+} catch (_) {
+  UsageStats = class NoopUsageStats {
+    constructor() { this.disabled = true; }
+    async init() {}
+    start() {}
+    async stop() {}
+    async flush() {}
+    record() {}
+    getSummary() {
+      return { disabled: true, note: 'usage_stats.js is not included in this build.' };
+    }
+  };
+}
 const {
   CHARGE_PLANS,
   getChargePlan,
@@ -33,6 +52,39 @@ function getJobManager() {
   return exporterModule ? exporterModule.jobManager : null;
 }
 
+// 美麗 PDF / OGP 生成モジュールの遅延取得
+let pdfGeneratorModule = null;
+function getPdfGenerator() {
+  if (!pdfGeneratorModule && process.env.JP_RULES_ONLY !== 'true') {
+    try {
+      pdfGeneratorModule = require('./pdf_generator');
+    } catch (e) {
+      try {
+        pdfGeneratorModule = require(path.resolve(__dirname, 'pdf_generator'));
+      } catch (err) {
+        pdfGeneratorModule = null;
+      }
+    }
+  }
+  return pdfGeneratorModule;
+}
+
+let ogpGeneratorModule = null;
+function getOgpGenerator() {
+  if (!ogpGeneratorModule && process.env.JP_RULES_ONLY !== 'true') {
+    try {
+      ogpGeneratorModule = require('./ogp_generator');
+    } catch (e) {
+      try {
+        ogpGeneratorModule = require(path.resolve(__dirname, 'ogp_generator'));
+      } catch (err) {
+        ogpGeneratorModule = null;
+      }
+    }
+  }
+  return ogpGeneratorModule;
+}
+
 function parseRawBody(req) {
   if (req._rawBody) return Promise.resolve(req._rawBody);
   return new Promise((resolve, reject) => {
@@ -43,6 +95,9 @@ function parseRawBody(req) {
       chunks.push(buf);
       length += buf.length;
       if (length > 5 * 1024 * 1024) { // 5MB limit
+        if (typeof req.destroy === 'function') {
+          req.destroy();
+        }
         reject(new Error("Request body too large"));
       }
     });
@@ -115,10 +170,135 @@ function getRequestBaseUrl(req) {
   return `${proto}://${host}`.replace(/\/+$/, '');
 }
 
+// ダウンロード名に日本語などが入っても Content-Disposition を壊さない（RFC 6266 / 5987）
+// ASCII 以外を含む値をそのまま入れると Node が ERR_INVALID_CHAR を出して 500 になる。
+function attachmentDisposition(filename) {
+  const name = String(filename || 'download.bin');
+  const ascii = name.replace(/[^\x20-\x7E]/g, '_').replace(/["\\]/g, '_');
+  const encoded = encodeURIComponent(name).replace(/['()*]/g, c => '%' + c.charCodeAt(0).toString(16).toUpperCase());
+  return `attachment; filename="${ascii}"; filename*=UTF-8''${encoded}`;
+}
+
+function getClientIp(req) {
+  const forwarded = req.headers['x-forwarded-for'];
+  if (typeof forwarded === 'string' && forwarded.trim()) {
+    return forwarded.split(',')[0].trim();
+  }
+  return req.socket?.remoteAddress || 'unknown';
+}
+
 function createStoreServer(options = {}) {
   const storePath = options.storePath;
   const storeManager = options.storeManager || new StoreManager(storePath, options);
   const handleMcp = createMcpHandler(storeManager);
+
+  // 利用状況の集計（IP・中身は残さない。課金データとは別保存）
+  const usageStats = options.usageStats || new UsageStats({
+    filePath: path.join(path.dirname(storeManager.storePath), 'usage_stats.json'),
+    supabaseConfig: storeManager.supabaseConfig,
+    fetchFn: storeManager.fetchFn
+  });
+
+  // 自分のテスト呼び出しを数えないための合図（ヘッダー x-usage-ignore: 1）
+  function recordUsage(req, name, extra = {}) {
+    try {
+      if (req.headers['x-usage-ignore'] === '1') return;
+      usageStats.record(name, {
+        ...extra,
+        ip: getClientIp(req),
+        ua: String(req.headers['user-agent'] || '').slice(0, 200)
+      });
+    } catch (_) { /* 集計の失敗で本処理を止めない */ }
+  }
+
+  // MCP リクエストを集計用の名前に直す（知らない名前は1つにまとめて、集計が膨らむのを防ぐ）
+  function mcpUsageName(body) {
+    const method = body && typeof body.method === 'string' ? body.method : '';
+    if (method === 'tools/call') {
+      const toolName = body.params && typeof body.params.name === 'string' ? body.params.name : '';
+      const known = getAvailableTools().some(t => t.name === toolName);
+      return `tools/call:${known ? toolName : '(unknown)'}`;
+    }
+    if (method === 'initialize' || method === 'tools/list' || method === 'ping') return method;
+    return 'other';
+  }
+
+  function mcpResponseIsError(resp) {
+    return Boolean(resp && (resp.error || (resp.result && resp.result.isError)));
+  }
+
+  // 無料（APIキー未指定）リクエスト用 IPレート制限設定（スライディングウィンドウ方式）
+  const rateLimitWindowMs = typeof options.rateLimitWindowMs === 'number' ? options.rateLimitWindowMs : 60000;
+  const rateLimitMaxRequests = typeof options.rateLimitMaxRequests === 'number' ? options.rateLimitMaxRequests : 30;
+  const rateLimitMap = new Map(); // IP -> Array<timestamp>
+
+  function checkFreeRateLimit(ip, now = Date.now()) {
+    let timestamps = rateLimitMap.get(ip);
+    if (!timestamps) {
+      timestamps = [];
+      rateLimitMap.set(ip, timestamps);
+    }
+
+    const windowStart = now - rateLimitWindowMs;
+    while (timestamps.length > 0 && timestamps[0] <= windowStart) {
+      timestamps.shift();
+    }
+
+    if (timestamps.length >= rateLimitMaxRequests) {
+      const oldest = timestamps[0];
+      const retryAfterSec = Math.max(1, Math.ceil((oldest + rateLimitWindowMs - now) / 1000));
+      return { allowed: false, retryAfterSec };
+    }
+
+    timestamps.push(now);
+
+    // メモリリーク防止（マップサイズ肥大化時の期限切れエントリ一括パージ）
+    if (rateLimitMap.size > 500) {
+      for (const [key, list] of rateLimitMap.entries()) {
+        if (list.length === 0 || list[list.length - 1] <= windowStart) {
+          rateLimitMap.delete(key);
+        }
+      }
+    }
+
+    return { allowed: true, retryAfterSec: 0 };
+  }
+
+  // 無料ライブデモ専用 IP レート制限設定（デフォルト 1分10回）
+  const demoRateLimitWindowMs = typeof options.demoRateLimitWindowMs === 'number' ? options.demoRateLimitWindowMs : 60000;
+  const demoRateLimitMaxRequests = typeof options.demoRateLimitMaxRequests === 'number' ? options.demoRateLimitMaxRequests : 10;
+  const demoRateLimitMap = new Map(); // IP -> Array<timestamp>
+
+  function checkDemoRateLimit(ip, now = Date.now()) {
+    let timestamps = demoRateLimitMap.get(ip);
+    if (!timestamps) {
+      timestamps = [];
+      demoRateLimitMap.set(ip, timestamps);
+    }
+
+    const windowStart = now - demoRateLimitWindowMs;
+    while (timestamps.length > 0 && timestamps[0] <= windowStart) {
+      timestamps.shift();
+    }
+
+    if (timestamps.length >= demoRateLimitMaxRequests) {
+      const oldest = timestamps[0];
+      const retryAfterSec = Math.max(1, Math.ceil((oldest + demoRateLimitWindowMs - now) / 1000));
+      return { allowed: false, retryAfterSec };
+    }
+
+    timestamps.push(now);
+
+    if (demoRateLimitMap.size > 500) {
+      for (const [key, list] of demoRateLimitMap.entries()) {
+        if (list.length === 0 || list[list.length - 1] <= windowStart) {
+          demoRateLimitMap.delete(key);
+        }
+      }
+    }
+
+    return { allowed: true, retryAfterSec: 0 };
+  }
 
   async function handleHttpRequest(req, res) {
     // CORS プリフライト
@@ -243,9 +423,30 @@ function createStoreServer(options = {}) {
           version: '1.0.0',
           mode,
           toolsCount: tools.length,
+          free_beta: process.env.JP_RULES_FREE_BETA === 'true',
           storage: storeManager.isRemoteEnabled() ? 'supabase' : 'local_json',
           timestamp: new Date().toISOString()
         });
+        return;
+      }
+
+      // 1-1. 利用状況 (GET /api/stats?days=30) — 環境変数 STATS_TOKEN と x-stats-token が一致したときだけ
+      if (pathname === '/api/stats' && method === 'GET') {
+        const expected = process.env.STATS_TOKEN;
+        const given = String(req.headers['x-stats-token'] || '');
+        const ok = Boolean(expected) &&
+          given.length === expected.length &&
+          crypto.timingSafeEqual(Buffer.from(given), Buffer.from(expected));
+        if (!expected || !ok) {
+          // 設定がない／合言葉違いは「そんなページはない」と同じ見え方にする
+          sendJson(res, 404, {
+            success: false,
+            error: "NOT_FOUND",
+            message: `Endpoint ${method} ${pathname} not found`
+          });
+          return;
+        }
+        sendJson(res, 200, { success: true, ...usageStats.getSummary(parsedUrl.searchParams.get('days')) });
         return;
       }
 
@@ -354,6 +555,264 @@ function createStoreServer(options = {}) {
         return;
       }
 
+      // 1-4. 無料ライブデモ API (POST /api/demo/ogp & POST /api/demo/pdf)
+      if (pathname.startsWith('/api/demo/') && method === 'POST') {
+        const isJpRulesOnly = process.env.JP_RULES_ONLY === 'true';
+        if (isJpRulesOnly) {
+          sendJson(res, 403, {
+            success: false,
+            error: "FORBIDDEN",
+            message: "Demo endpoints are disabled in JP_RULES_ONLY mode."
+          });
+          return;
+        }
+
+        // IP レート制限チェック（1分10回）
+        const clientIp = getClientIp(req);
+        const rateCheck = checkDemoRateLimit(clientIp);
+        if (!rateCheck.allowed) {
+          sendJson(res, 429, {
+            success: false,
+            error: "RATE_LIMIT_EXCEEDED",
+            message: `Demo rate limit exceeded (${demoRateLimitMaxRequests} requests/min). Use MCP API for production workflows.`
+          }, {
+            'Retry-After': String(rateCheck.retryAfterSec)
+          });
+          return;
+        }
+
+        const body = await parseJsonBody(req);
+
+        // 利用集計（知っているデモ名だけ数える）
+        const demoName = pathname.slice('/api/demo/'.length);
+        if (['ogp', 'pdf', 'temp-mail'].includes(demoName)) {
+          recordUsage(req, `demo:${demoName}`);
+        }
+
+        // 1-4-1. OGP 画像デモ (POST /api/demo/ogp)
+        if (pathname === '/api/demo/ogp') {
+          const title = body.title;
+          if (!title || typeof title !== 'string' || !title.trim()) {
+            sendJson(res, 400, {
+              success: false,
+              error: "BAD_REQUEST",
+              message: "title is required"
+            });
+            return;
+          }
+          if (title.length > 120) {
+            sendJson(res, 400, {
+              success: false,
+              error: "BAD_REQUEST",
+              message: "Title exceeds demo limit of 120 characters"
+            });
+            return;
+          }
+
+          const ogpGen = getOgpGenerator();
+          if (!ogpGen) {
+            sendJson(res, 503, {
+              success: false,
+              error: "GENERATOR_UNAVAILABLE",
+              message: "OGP generator is unavailable in current environment"
+            });
+            return;
+          }
+
+          try {
+            const ogpResult = await ogpGen.generateOgpImageBuffer({
+              title,
+              subtitle: body.subtitle || "",
+              badge: body.badge || "DEMO PREVIEW",
+              author: body.author || "Souon AI Micro Store",
+              theme: body.theme || "cyber_neon",
+              size: body.size || "ogp"
+            });
+
+            res.writeHead(200, {
+              'Content-Type': 'image/png',
+              'Content-Disposition': 'inline; filename="demo_ogp.png"',
+              'Content-Length': ogpResult.buffer.length,
+              'Access-Control-Allow-Origin': '*'
+            });
+            res.end(ogpResult.buffer);
+            return;
+          } catch (err) {
+            sendJson(res, 500, {
+              success: false,
+              error: "OGP_GENERATION_FAILED",
+              message: err.message
+            });
+            return;
+          }
+        }
+
+        // 1-4-2. 美麗 PDF デモ (POST /api/demo/pdf)
+        if (pathname === '/api/demo/pdf') {
+          const markdown = body.markdown;
+          if (!markdown || typeof markdown !== 'string' || !markdown.trim()) {
+            sendJson(res, 400, {
+              success: false,
+              error: "BAD_REQUEST",
+              message: "markdown is required"
+            });
+            return;
+          }
+          if (markdown.length > 1500) {
+            sendJson(res, 400, {
+              success: false,
+              error: "BAD_REQUEST",
+              message: "Demo markdown limit is 1,500 characters. Use MCP API for unlimited documents."
+            });
+            return;
+          }
+
+          const pdfGen = getPdfGenerator();
+          if (!pdfGen) {
+            sendJson(res, 503, {
+              success: false,
+              error: "GENERATOR_UNAVAILABLE",
+              message: "PDF generator is unavailable in current environment"
+            });
+            return;
+          }
+
+          try {
+            const pdfResult = await pdfGen.generateBeautifulPdfBuffer({
+              markdown,
+              title: body.title || "Live Demo Preview",
+              theme: body.theme || "business_report",
+              pageSize: body.pageSize || "A4",
+              footerText: "Live Demo - Souon AI Micro Store"
+            });
+
+            res.writeHead(200, {
+              'Content-Type': 'application/pdf',
+              'Content-Disposition': 'inline; filename="demo_preview.pdf"',
+              'Content-Length': pdfResult.buffer.length,
+              'Access-Control-Allow-Origin': '*'
+            });
+            res.end(pdfResult.buffer);
+            return;
+          } catch (err) {
+            sendJson(res, 500, {
+              success: false,
+              error: "PDF_GENERATION_FAILED",
+              message: err.message
+            });
+            return;
+          }
+        }
+
+        // 1-4-3. 使い捨てメール＆OTP抽出デモ (POST /api/demo/temp-mail)
+        if (pathname === '/api/demo/temp-mail') {
+          const tempMailMgr = typeof storeManager.getTempMailManager === 'function' ? storeManager.getTempMailManager() : null;
+          if (!tempMailMgr) {
+            sendJson(res, 503, {
+              success: false,
+              error: "TEMP_MAIL_UNAVAILABLE",
+              message: "Temp mail manager is unavailable in current environment"
+            });
+            return;
+          }
+
+          try {
+            const demoApiKey = `sk_demo_${Date.now()}`;
+            // 1. 仮インボックス作成
+            const inbox = tempMailMgr.createInbox(demoApiKey);
+
+            // 2. ダミーの認証コード付きメールを受信シミュレート
+            const dummyCode = String(Math.floor(100000 + Math.random() * 900000));
+            const dummyToken = crypto.randomBytes(8).toString('hex');
+            const verifyLink = `https://inbox.souon.local/verify?token=${dummyToken}`;
+
+            tempMailMgr.receiveInboundEmail({
+              to: inbox.email,
+              from: "verify@auth.souon.local",
+              subject: "【創音知能】アカウント確認用コードのお知らせ",
+              text: `創音知能 AI Micro Store をご利用いただきありがとうございます。\n\nお客様の認証コードは【 ${dummyCode} 】です。有効期限は10分間です。\n\nまた、以下の確認リンクをクリックしてもアカウントを有効化できます：\n${verifyLink}\n\n※このメールに心当たりがない場合は破棄してください。`,
+              html: `<p>認証コード：<strong>${dummyCode}</strong></p><p><a href="${verifyLink}">アカウント有効化リンク</a></p>`
+            });
+
+            // 3. インボックス読み取り & 抽出結果返却
+            const readData = tempMailMgr.readInbox(inbox.inbox_id, demoApiKey);
+            sendJson(res, 200, {
+              success: true,
+              demo: true,
+              inbox_id: inbox.inbox_id,
+              email: inbox.email,
+              latest_otp: readData.latest_otp,
+              all_otps: readData.all_otps,
+              verification_links: readData.verification_links,
+              sample_subject: readData.emails[0]?.subject,
+              message: "Demo temporary inbox created and verification email parsed successfully."
+            });
+            return;
+          } catch (err) {
+            sendJson(res, 500, {
+              success: false,
+              error: "DEMO_TEMP_MAIL_FAILED",
+              message: err.message
+            });
+            return;
+          }
+        }
+      }
+
+      // 1-5. 使い捨てメール受信 Webhook (POST /api/temp-mail/inbound)
+      if (pathname === '/api/temp-mail/inbound' && method === 'POST') {
+        const isJpRulesOnly = process.env.JP_RULES_ONLY === 'true';
+        if (isJpRulesOnly) {
+          sendJson(res, 403, {
+            success: false,
+            error: "FORBIDDEN",
+            message: "Temp mail inbound webhook is disabled in JP_RULES_ONLY mode."
+          });
+          return;
+        }
+
+        // シークレット検証 (設定時のみ)
+        const expectedSecret = options.tempMailWebhookSecret || process.env.TEMP_MAIL_WEBHOOK_SECRET;
+        if (expectedSecret) {
+          const incomingSecret = req.headers['x-webhook-secret'];
+          if (!incomingSecret || incomingSecret !== expectedSecret) {
+            sendJson(res, 401, {
+              success: false,
+              error: "UNAUTHORIZED",
+              message: "Invalid or missing x-webhook-secret header"
+            });
+            return;
+          }
+        }
+
+        const tempMailMgr = typeof storeManager.getTempMailManager === 'function' ? storeManager.getTempMailManager() : null;
+        if (!tempMailMgr) {
+          sendJson(res, 503, {
+            success: false,
+            error: "TEMP_MAIL_UNAVAILABLE",
+            message: "Temp mail manager is unavailable in current environment"
+          });
+          return;
+        }
+
+        const body = await parseJsonBody(req);
+        const result = tempMailMgr.receiveInboundEmail(body);
+        if (!result.accepted) {
+          sendJson(res, 400, {
+            success: false,
+            error: "EMAIL_REJECTED",
+            reason: result.reason
+          });
+          return;
+        }
+
+        sendJson(res, 200, {
+          success: true,
+          ...result
+        });
+        return;
+      }
+
       // 1-4. Stripe Webhook イベント受信 (POST /api/billing/webhook)
       if (pathname === '/api/billing/webhook' && method === 'POST') {
         const rawBody = await parseRawBody(req);
@@ -440,6 +899,16 @@ function createStoreServer(options = {}) {
 
       // 2. 商品一覧 (GET /api/products)
       if (pathname === '/api/products' && method === 'GET') {
+        const isJpRulesOnly = process.env.JP_RULES_ONLY === 'true';
+        if (isJpRulesOnly) {
+          sendJson(res, 403, {
+            success: false,
+            error: "FORBIDDEN",
+            message: "Products endpoint is disabled in JP_RULES_ONLY mode."
+          });
+          return;
+        }
+
         const products = storeManager.getProducts();
         sendJson(res, 200, {
           success: true,
@@ -521,12 +990,25 @@ function createStoreServer(options = {}) {
 
       // 6. 購入リクエスト (POST /api/purchase)
       if (pathname === '/api/purchase' && method === 'POST') {
+        const isJpRulesOnly = process.env.JP_RULES_ONLY === 'true';
+        if (isJpRulesOnly) {
+          sendJson(res, 403, {
+            success: false,
+            error: "FORBIDDEN",
+            message: "Purchase endpoint is disabled in JP_RULES_ONLY mode."
+          });
+          return;
+        }
+
         const body = await parseJsonBody(req);
         const apiKey = getBearerToken(req) || body.api_key;
         const productId = body.product_id;
         const params = body.params || {};
 
-        if (!apiKey) {
+        // 無料ベータ中は APIキー不要・課金なし
+        const freeStore = process.env.JP_RULES_FREE_BETA === 'true';
+
+        if (!apiKey && !freeStore) {
           sendJson(res, 401, {
             success: false,
             error: "UNAUTHORIZED",
@@ -545,7 +1027,9 @@ function createStoreServer(options = {}) {
         }
 
         try {
-          const result = storeManager.purchase(apiKey, productId, params);
+          const result = (freeStore && typeof storeManager.purchaseFree === 'function')
+            ? storeManager.purchaseFree(productId, params)
+            : storeManager.purchase(apiKey, productId, params);
           await storeManager.flushRemote();
           sendJson(res, 200, result);
         } catch (err) {
@@ -563,13 +1047,30 @@ function createStoreServer(options = {}) {
         return;
       }
 
-      // 7. MIDIファイルダウンロード (GET /api/download/:tx_id)
+      // 7. ファイルダウンロード (GET /api/download/:tx_id) - MIDI / PDF バイナリ配信
       const downloadMatch = pathname.match(/^\/api\/download\/([^/]+)$/);
       if (downloadMatch && method === 'GET') {
         const txId = downloadMatch[1];
+
+        // 汎用ファイルキャッシュ (PDF等)
+        if (typeof storeManager.getDownloadFile === 'function') {
+          const fileObj = storeManager.getDownloadFile(txId);
+          if (fileObj && fileObj.buffer) {
+            res.writeHead(200, {
+              'Content-Type': fileObj.contentType || 'application/octet-stream',
+              'Content-Disposition': attachmentDisposition(fileObj.filename || (txId + '.bin')),
+              'Content-Length': fileObj.buffer.length,
+              'Access-Control-Allow-Origin': '*'
+            });
+            res.end(fileObj.buffer);
+            return;
+          }
+        }
+
+        // 既存 MIDI ファイルキャッシュ
         const midiBuffer = storeManager.getMidiBufferByTx(txId);
         if (!midiBuffer) {
-          sendJson(res, 404, { success: false, error: "FILE_NOT_FOUND", message: "MIDI binary not found or expired" });
+          sendJson(res, 404, { success: false, error: "FILE_NOT_FOUND", message: "File binary not found or expired" });
           return;
         }
         res.writeHead(200, {
@@ -674,7 +1175,33 @@ function createStoreServer(options = {}) {
       if (pathname === '/mcp' && method === 'POST') {
         const body = await parseJsonBody(req);
         const authKey = getAuthApiKey(req);
+
+        // 無料リクエスト（有効なAPIキー未所持・未登録キー含む）に対する IP レート制限
+        const keyRecord = authKey ? storeManager.getKey(authKey) : null;
+        const hasValidActiveKey = Boolean(keyRecord && (keyRecord.is_active === true || keyRecord.status === 'active'));
+
+        if (!hasValidActiveKey) {
+          const clientIp = getClientIp(req);
+          const rateCheck = checkFreeRateLimit(clientIp);
+          if (!rateCheck.allowed) {
+            recordUsage(req, 'rate_limited', { error: true });
+            const reqId = (body && body.id !== undefined) ? body.id : null;
+            sendJson(res, 429, {
+              jsonrpc: "2.0",
+              id: reqId,
+              error: {
+                code: -32029,
+                message: "Free tier rate limit exceeded (30 requests/min). Get an API key at / for higher limits and compliance checks."
+              }
+            }, {
+              'Retry-After': String(rateCheck.retryAfterSec)
+            });
+            return;
+          }
+        }
+
         const mcpResponse = await handleMcp(body, authKey);
+        recordUsage(req, mcpUsageName(body), { error: mcpResponseIsError(mcpResponse) });
         await storeManager.flushRemote();
         if (mcpResponse) {
           sendJson(res, 200, mcpResponse);
@@ -707,6 +1234,7 @@ function createStoreServer(options = {}) {
   return {
     server,
     storeManager,
+    usageStats,
     handleHttpRequest
   };
 }
@@ -715,7 +1243,15 @@ function createStoreServer(options = {}) {
 if (require.main === module) {
   (async () => {
     const PORT = parseInt(process.env.PORT, 10) || 3456;
-    const { server, storeManager } = createStoreServer();
+    const { server, storeManager, usageStats } = createStoreServer();
+
+    // 利用集計を復元して、1分ごとに保存を始める
+    try {
+      await usageStats.init();
+      usageStats.start();
+    } catch (err) {
+      console.error("[AI Micro Store] Usage stats init error:", err);
+    }
 
     // 起動時にリモート (Supabase) から残高・APIキーを復元
     if (storeManager && typeof storeManager.hydrateFromRemote === 'function') {
@@ -733,6 +1269,9 @@ if (require.main === module) {
         if (storeManager && typeof storeManager.flushRemote === 'function') {
           await storeManager.flushRemote();
         }
+      } catch (_) {}
+      try {
+        await usageStats.stop();
       } catch (_) {}
       process.exit(0);
     };

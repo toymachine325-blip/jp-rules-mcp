@@ -6,6 +6,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 
 // ロックタイポスタジオの MP4 エクスポーター（非同期ジョブマネージャー）参照
 let exporterModule = null;
@@ -44,6 +45,40 @@ try {
 
 function getRulesDb() {
   return jpRulesModule ? jpRulesModule.defaultRulesDb : null;
+}
+
+// 美麗 PDF 生成モジュール参照（遅延・安全ロード）
+let pdfGeneratorModule = null;
+function getPdfGenerator() {
+  if (!pdfGeneratorModule && process.env.JP_RULES_ONLY !== 'true') {
+    try {
+      pdfGeneratorModule = require('./pdf_generator');
+    } catch (e) {
+      try {
+        pdfGeneratorModule = require(path.resolve(__dirname, 'pdf_generator'));
+      } catch (err) {
+        pdfGeneratorModule = null;
+      }
+    }
+  }
+  return pdfGeneratorModule;
+}
+
+// OGP・サムネイル画像生成モジュール参照（遅延・安全ロード）
+let ogpGeneratorModule = null;
+function getOgpGenerator() {
+  if (!ogpGeneratorModule && process.env.JP_RULES_ONLY !== 'true') {
+    try {
+      ogpGeneratorModule = require('./ogp_generator');
+    } catch (e) {
+      try {
+        ogpGeneratorModule = require(path.resolve(__dirname, 'ogp_generator'));
+      } catch (err) {
+        ogpGeneratorModule = null;
+      }
+    }
+  }
+  return ogpGeneratorModule;
 }
 
 const TOOL_LIST_PRODUCTS = {
@@ -246,6 +281,117 @@ const TOOL_PREVIEW_ROCKTYPO_FRAMES = {
   }
 };
 
+const TOOL_GENERATE_BEAUTIFUL_PDF = {
+  name: "generate_beautiful_pdf",
+  description: "【有料 / 20 JPY】Markdownテキストから見出し・太字・リスト・表・コードブロック・引用・ページ番号付きの美しいプロフェッショナルPDFを自動生成します（日本語・英語完全対応）。AIお小遣い月額上限ロック連動（1回20円、sk_souon_...必須）。 / Generate beautiful, professional PDF documents from Markdown with headers, bold text, lists, tables, code blocks, blockquotes, and page numbers (Japanese & English supported). 20 JPY per generation, requires AI allowance API key.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      apiKey: {
+        type: "string",
+        description: "AIお小遣いキー / AI allowance API key (sk_souon_...). Authorization Bearer header also supported."
+      },
+      markdown: {
+        type: "string",
+        description: "PDF化するMarkdownテキスト / Markdown text to render into PDF"
+      },
+      title: {
+        type: "string",
+        description: "ドキュメントタイトル（ヘッダーに表示） / Document title shown in header (default: 'Document')"
+      },
+      theme: {
+        type: "string",
+        description: "テーマ選択 ('business_report', 'modern_clean', 'dark_tech') / Theme style: 'business_report' (white/navy), 'modern_clean' (clean/teal), 'dark_tech' (dark/cyan)",
+        enum: ["business_report", "modern_clean", "dark_tech"]
+      },
+      pageSize: {
+        type: "string",
+        description: "用紙サイズ ('A4', 'Letter') / Page size: 'A4' or 'Letter' (default: 'A4')",
+        enum: ["A4", "Letter"]
+      },
+      footerText: {
+        type: "string",
+        description: "フッター左側の表記テキスト / Footer text on bottom left (default: 'Souon AI Micro Store')"
+      }
+    },
+    required: ["markdown"]
+  }
+};
+
+const TOOL_GENERATE_OGP_IMAGE = {
+  name: "generate_ogp_image",
+  description: "【有料 / 10 JPY】タイトル・サブタイトル・バッジ・テーマ・サイズを指定し、SNSシェア用OGP画像やYouTubeサムネイルPNG（1200x630 / 1280x720 / 1080x1080）を超高速自動生成します（日本語・英語完全対応）。AIお小遣い月額上限ロック連動（1回10円、sk_souon_...必須）。 / Generate high-quality OGP banner & thumbnail PNG images (1200x630, 1280x720, 1080x1080) for SNS sharing and YouTube from title and badge (Japanese & English supported). 10 JPY per generation, requires AI allowance API key.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      apiKey: {
+        type: "string",
+        description: "AIお小遣いキー / AI allowance API key (sk_souon_...). Authorization Bearer header also supported."
+      },
+      title: {
+        type: "string",
+        description: "画像の中央に大きく配置するメインタイトル（長文は自動折り返し） / Main title text to display on image"
+      },
+      subtitle: {
+        type: "string",
+        description: "タイトルの下に配置するサブタイトル・解説文 / Optional subtitle or description text"
+      },
+      badge: {
+        type: "string",
+        description: "左上に配置するカテゴリ・ブランドバッジ / Category badge tag on top left (default: 'AI COMMERCE')"
+      },
+      author: {
+        type: "string",
+        description: "フッター左に配置する著者・ブランド名 / Author or brand name in footer (default: '創音知能 • Souon Chinou')"
+      },
+      theme: {
+        type: "string",
+        description: "デザインテーマ ('cyber_neon', 'clean_minimal', 'bold_editorial') / Visual theme: 'cyber_neon' (dark/cyan), 'clean_minimal' (white/teal), 'bold_editorial' (high contrast yellow/black)",
+        enum: ["cyber_neon", "clean_minimal", "bold_editorial"]
+      },
+      size: {
+        type: "string",
+        description: "画像サイズ ('ogp': 1200x630, 'youtube': 1280x720, 'square': 1080x1080) / Image size: 'ogp' (1200x630), 'youtube' (1280x720), or 'square' (1080x1080)",
+        enum: ["ogp", "youtube", "square"]
+      }
+    },
+    required: ["title"]
+  }
+};
+
+const TOOL_CREATE_TEMP_INBOX = {
+  name: "create_temp_inbox",
+  description: "【有料 / 10 JPY】AIエージェント自律サインアップ用の使い捨てメールアドレス（inbox_id / 有効期限30分）を発行します。AIお小遣い月額上限ロック連動（1回10円、sk_souon_...必須）。 / Create a temporary disposable email inbox (valid for 30 mins) for autonomous agent signups and OTP verification. 10 JPY per inbox, requires AI allowance API key.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      apiKey: {
+        type: "string",
+        description: "AIお小遣いキー / AI allowance API key (sk_souon_...). Authorization Bearer header also supported."
+      }
+    }
+  }
+};
+
+const TOOL_READ_TEMP_INBOX = {
+  name: "read_temp_inbox",
+  description: "【無料 / 0 JPY】create_temp_inbox で作成したインボックスに届いたメール一覧を照会し、認証コード（OTP）と確認用URLを自動抽出して取得します（APIキー必須・所有者照会無料）。 / Read incoming emails from temporary inbox, automatically extracting verification codes (OTP) and confirmation links. Free (0 JPY), requires owner API key.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      apiKey: {
+        type: "string",
+        description: "インボックス作成時の所有者APIキー / Owner API key used when creating the inbox"
+      },
+      inbox_id: {
+        type: "string",
+        description: "照会するインボックスID (inb_...) / Temporary inbox ID to read"
+      }
+    },
+    required: ["inbox_id"]
+  }
+};
+
 const TOOL_LIST_JP_RULE_CATEGORIES = {
   name: "list_jp_rule_categories",
   description: "【無料 / Free 0 JPY】日本のインバウンド旅行・越境規制（2026年11月施行の新免税制度、JR新幹線特大荷物、祝日・大型連休混雑、税関・検疫持込制限）のカテゴリ一覧、ルール件数、最終検証日時を取得します。APIキー不要・課金0円。 / List available categories, rule counts, and verification timestamps for Japan inbound travel and cross-border regulations (tax-free reform Nov 2026, bullet train luggage, holiday rush, customs restrictions). Free, no API key required.",
@@ -313,18 +459,103 @@ const TOOL_CHECK_JP_TRAVEL_COMPLIANCE = {
   }
 };
 
+const TOOL_CHECK_JP_TRAVEL_COMPLIANCE_FREE_BETA = {
+  name: "check_jp_travel_compliance",
+  description: "【無料ベータ / Free Beta 0 JPY】旅行者の購入額・荷物寸法・旅行日を指定し、日本の法規制適合性（新免税対象可否・特大荷物事前予約義務・祝日混雑リスク）を即決自動判定します。パブリックベータ期間中完全無料・APIキー不要。 / Instant automated compliance evaluation for Japan inbound travel regulations: tax-free shopping eligibility (Nov 2026 reform), Shinkansen oversized baggage rules, or peak holiday congestion risk. Free during public beta, no API key required (30 req/min).",
+  inputSchema: {
+    type: "object",
+    properties: {
+      apiKey: {
+        type: "string",
+        description: "オプションのAIお小遣いキー（ベータ期間中は無料のため渡されても課金されません） / Optional API key (free during beta, no charge even if provided)."
+      },
+      checkType: {
+        type: "string",
+        description: "判定種別 ('tax_free', 'shinkansen_baggage', 'holiday_peak') / Compliance check type: 'tax_free', 'shinkansen_baggage', or 'holiday_peak'",
+        enum: ["tax_free", "shinkansen_baggage", "holiday_peak"]
+      },
+      purchaseAmountJpy: {
+        type: "number",
+        description: "購入金額（税抜日本円。checkType === 'tax_free' で使用） / Purchase amount in JPY excluding tax (for tax_free check)"
+      },
+      baggageTotalCm: {
+        type: "number",
+        description: "荷物3辺合計（cm。checkType === 'shinkansen_baggage' で使用） / Total baggage dimensions in cm (length + width + height) (for shinkansen_baggage check)"
+      },
+      travelDate: {
+        type: "string",
+        description: "旅行日 (YYYY-MM-DD。checkType === 'holiday_peak' で使用) / Travel date in YYYY-MM-DD format (for holiday_peak check)"
+      }
+    },
+    required: ["checkType"]
+  }
+};
+
+function isFreeBetaMode() {
+  return process.env.JP_RULES_FREE_BETA === 'true';
+}
+
+// 無料ベータで「ショップ全体」を開けているか（JP_RULES_ONLY のときは従来どおり jp-rules だけ）
+function isFreeStoreMode() {
+  return isFreeBetaMode() && process.env.JP_RULES_ONLY !== 'true';
+}
+
+// 無料ベータ中の「課金したことにする」ダミー（残高は動かさない・保存もしない）
+function makeFreeCharge() {
+  return {
+    tx_id: `tx_${crypto.randomBytes(8).toString('hex')}`,
+    monthly_limit_yen: null,
+    used_yen: 0,
+    remaining_yen: null,
+    free_beta: true
+  };
+}
+
+function chargeOrFree(storeManager, apiKey, amountYen, info) {
+  if (isFreeStoreMode()) return makeFreeCharge();
+  return storeManager.chargeKey(apiKey, amountYen, info);
+}
+
+// 無料ベータ用の説明に差し替えた道具定義（元の定義は書き換えない）
+function freeBetaVariant(tool) {
+  const props = { ...(tool.inputSchema.properties || {}) };
+  if (props.apiKey) {
+    props.apiKey = {
+      type: "string",
+      description: "オプション（ベータ期間中は無料のため不要・渡されても課金されません） / Optional. Not needed during the free beta; never charged even if provided."
+    };
+  }
+  return {
+    ...tool,
+    description: "【無料ベータ / Free Beta 0 JPY・APIキー不要】" + tool.description +
+      " ※パブリックベータ期間中は0円（上記の価格は通常価格）。 / Free during the public beta: no API key, no charge (prices above are the regular prices).",
+    inputSchema: {
+      ...tool.inputSchema,
+      properties: props,
+      required: (tool.inputSchema.required || []).filter(r => r !== 'apiKey')
+    }
+  };
+}
+
+function getCheckComplianceTool() {
+  return isFreeBetaMode() ? TOOL_CHECK_JP_TRAVEL_COMPLIANCE_FREE_BETA : TOOL_CHECK_JP_TRAVEL_COMPLIANCE;
+}
+
 function getAvailableTools() {
+  const checkTool = getCheckComplianceTool();
+
   if (process.env.JP_RULES_ONLY === 'true') {
     return [
       TOOL_LIST_JP_RULE_CATEGORIES,
       TOOL_QUERY_JP_INBOUND_RULES,
-      TOOL_CHECK_JP_TRAVEL_COMPLIANCE
+      checkTool
     ];
   }
 
+  const freeStore = isFreeStoreMode();
   const tools = [
     TOOL_LIST_PRODUCTS,
-    TOOL_PURCHASE_PRODUCT
+    freeStore ? freeBetaVariant(TOOL_PURCHASE_PRODUCT) : TOOL_PURCHASE_PRODUCT
   ];
 
   if (isRockTypoAvailable()) {
@@ -335,10 +566,24 @@ function getAvailableTools() {
     );
   }
 
+  // 美麗 PDF 生成ツール (通常モード)
+  tools.push(freeStore ? freeBetaVariant(TOOL_GENERATE_BEAUTIFUL_PDF) : TOOL_GENERATE_BEAUTIFUL_PDF);
+
+  // OGP・サムネイル画像生成ツール (通常モード)
+  tools.push(freeStore ? freeBetaVariant(TOOL_GENERATE_OGP_IMAGE) : TOOL_GENERATE_OGP_IMAGE);
+
+  // 使い捨てメール受信＆OTP抽出ツール (通常モード)
+  // 使い捨てメールは「実際にメールを受け取れるドメイン」(TEMP_MAIL_DOMAIN) が設定されるまで、
+  // 無料ベータでは公開しない（受け取れないアドレスを配ってしまうため）
+  if (!freeStore || process.env.TEMP_MAIL_DOMAIN) {
+    tools.push(TOOL_CREATE_TEMP_INBOX);
+    tools.push(TOOL_READ_TEMP_INBOX);
+  }
+
   tools.push(
     TOOL_LIST_JP_RULE_CATEGORIES,
     TOOL_QUERY_JP_INBOUND_RULES,
-    TOOL_CHECK_JP_TRAVEL_COMPLIANCE
+    checkTool
   );
 
   return tools;
@@ -396,6 +641,17 @@ function createMcpHandler(storeManager) {
       const args = params?.arguments || {};
 
       if (toolName === "list_products") {
+        if (process.env.JP_RULES_ONLY === 'true') {
+          return {
+            jsonrpc: "2.0",
+            id,
+            result: {
+              isError: true,
+              content: [{ type: "text", text: "Error: list_products is unavailable in JP_RULES_ONLY mode." }]
+            }
+          };
+        }
+
         const products = storeManager.getProducts();
         return {
           jsonrpc: "2.0",
@@ -412,11 +668,22 @@ function createMcpHandler(storeManager) {
       }
 
       if (toolName === "purchase_product") {
+        if (process.env.JP_RULES_ONLY === 'true') {
+          return {
+            jsonrpc: "2.0",
+            id,
+            result: {
+              isError: true,
+              content: [{ type: "text", text: "Error: purchase_product is unavailable in JP_RULES_ONLY mode." }]
+            }
+          };
+        }
+
         const apiKey = args.apiKey || authHeaderKey;
         const productId = args.productId;
         const productParams = args.params || {};
 
-        if (!apiKey) {
+        if (!apiKey && !isFreeStoreMode()) {
           return {
             jsonrpc: "2.0",
             id,
@@ -433,7 +700,9 @@ function createMcpHandler(storeManager) {
         }
 
         try {
-          const purchaseResult = storeManager.purchase(apiKey, productId, productParams);
+          const purchaseResult = isFreeStoreMode() && typeof storeManager.purchaseFree === 'function'
+            ? storeManager.purchaseFree(productId, productParams)
+            : storeManager.purchase(apiKey, productId, productParams);
           return {
             jsonrpc: "2.0",
             id,
@@ -1033,10 +1302,13 @@ function createMcpHandler(storeManager) {
         };
       }
 
-      // 4-6. check_jp_travel_compliance (有料 30 JPY・APIキー必須・月額上限ロック連動)
+      // 4-6. check_jp_travel_compliance (有料 30 JPY / JP_RULES_FREE_BETA=true 時は完全無料0 JPY・APIキー不要)
       if (toolName === "check_jp_travel_compliance") {
+        const isFreeBeta = isFreeBetaMode();
         const apiKey = args.apiKey || authHeaderKey;
-        if (!apiKey) {
+
+        // ベータ期間外の通常時は API キー必須
+        if (!isFreeBeta && !apiKey) {
           return {
             jsonrpc: "2.0",
             id,
@@ -1069,17 +1341,160 @@ function createMcpHandler(storeManager) {
           };
         }
 
-        const complianceCostYen = 30;
+        let complianceCostYen = 0;
+        let chargeInfo = null;
+
+        if (!isFreeBeta) {
+          complianceCostYen = 30;
+          try {
+            chargeInfo = storeManager.chargeKey(apiKey, complianceCostYen, {
+              action: "check_jp_travel_compliance",
+              description: "Check Japan Travel Compliance (30 JPY)",
+              params: {
+                checkType,
+                purchaseAmountJpy: args.purchaseAmountJpy,
+                baggageTotalCm: args.baggageTotalCm,
+                travelDate: args.travelDate
+              }
+            });
+          } catch (err) {
+            return {
+              jsonrpc: "2.0",
+              id,
+              result: {
+                isError: true,
+                content: [
+                  {
+                    type: "text",
+                    text: JSON.stringify({
+                      error: err.code || "CHARGE_FAILED",
+                      message: err.message,
+                      statusCode: err.statusCode || 500,
+                      monthly_limit_yen: err.monthly_limit_yen,
+                      used_yen: err.used_yen,
+                      price_yen: err.price_yen,
+                      remaining_yen: err.remaining_yen
+                    }, null, 2)
+                  }
+                ]
+              }
+            };
+          }
+        }
+
+        const rulesDb = getRulesDb();
+        if (!rulesDb) {
+          return {
+            jsonrpc: "2.0",
+            id,
+            result: {
+              isError: true,
+              content: [{ type: "text", text: "Error: Japan Inbound Rules database is not available." }]
+            }
+          };
+        }
+
+        try {
+          const complianceResult = rulesDb.checkCompliance({
+            checkType,
+            purchaseAmountJpy: args.purchaseAmountJpy,
+            baggageTotalCm: args.baggageTotalCm,
+            travelDate: args.travelDate
+          });
+
+          const resObj = {
+            success: true,
+            cost_yen: complianceCostYen,
+            compliance: complianceResult
+          };
+
+          if (isFreeBeta) {
+            resObj.free_beta = true;
+          }
+
+          if (chargeInfo) {
+            resObj.monthly_limit_yen = chargeInfo.monthly_limit_yen;
+            resObj.used_yen = chargeInfo.used_yen;
+            resObj.remaining_yen = chargeInfo.remaining_yen;
+            resObj.tx_id = chargeInfo.tx_id;
+          }
+
+          return {
+            jsonrpc: "2.0",
+            id,
+            result: {
+              content: [
+                {
+                  type: "text",
+                  text: JSON.stringify(resObj, null, 2)
+                }
+              ]
+            }
+          };
+        } catch (err) {
+          return {
+            jsonrpc: "2.0",
+            id,
+            result: {
+              isError: true,
+              content: [
+                {
+                  type: "text",
+                  text: `Error: ${err.message}`
+                }
+              ]
+            }
+          };
+        }
+      }
+
+      // 4-7. generate_beautiful_pdf (有料 20 JPY・APIキー必須・JP_RULES_ONLY時は除外)
+      if (toolName === "generate_beautiful_pdf") {
+        if (process.env.JP_RULES_ONLY === 'true') {
+          return {
+            jsonrpc: "2.0",
+            id,
+            result: {
+              isError: true,
+              content: [{ type: "text", text: "Error: generate_beautiful_pdf is unavailable in JP_RULES_ONLY mode." }]
+            }
+          };
+        }
+
+        const apiKey = args.apiKey || authHeaderKey;
+        if (!apiKey && !isFreeStoreMode()) {
+          return {
+            jsonrpc: "2.0",
+            id,
+            result: {
+              isError: true,
+              content: [{ type: "text", text: "Error: API key is required. Provide it in arguments.apiKey or HTTP Authorization Bearer header." }]
+            }
+          };
+        }
+
+        const markdown = args.markdown;
+        if (!markdown || typeof markdown !== 'string' || !markdown.trim()) {
+          return {
+            jsonrpc: "2.0",
+            id,
+            result: {
+              isError: true,
+              content: [{ type: "text", text: "Error: markdown is required and cannot be empty." }]
+            }
+          };
+        }
+
+        const pdfCostYen = 20;
         let chargeInfo = null;
         try {
-          chargeInfo = storeManager.chargeKey(apiKey, complianceCostYen, {
-            action: "check_jp_travel_compliance",
-            description: "Check Japan Travel Compliance (30 JPY)",
+          chargeInfo = chargeOrFree(storeManager, apiKey, pdfCostYen, {
+            action: "generate_beautiful_pdf",
+            description: "Generate Beautiful PDF from Markdown (20 JPY)",
             params: {
-              checkType,
-              purchaseAmountJpy: args.purchaseAmountJpy,
-              baggageTotalCm: args.baggageTotalCm,
-              travelDate: args.travelDate
+              title: args.title || "Document",
+              theme: args.theme || "business_report",
+              pageSize: args.pageSize || "A4"
             }
           });
         } catch (err) {
@@ -1106,25 +1521,40 @@ function createMcpHandler(storeManager) {
           };
         }
 
-        const rulesDb = getRulesDb();
-        if (!rulesDb) {
+        const pdfGen = getPdfGenerator();
+        if (!pdfGen) {
           return {
             jsonrpc: "2.0",
             id,
             result: {
               isError: true,
-              content: [{ type: "text", text: "Error: Japan Inbound Rules database is not available." }]
+              content: [{ type: "text", text: "Error: PDF generator engine is not available in current environment." }]
             }
           };
         }
 
         try {
-          const complianceResult = rulesDb.checkCompliance({
-            checkType,
-            purchaseAmountJpy: args.purchaseAmountJpy,
-            baggageTotalCm: args.baggageTotalCm,
-            travelDate: args.travelDate
+          const docTitle = args.title || "Document";
+          const pdfResult = await pdfGen.generateBeautifulPdfBuffer({
+            markdown,
+            title: docTitle,
+            theme: args.theme || "business_report",
+            pageSize: args.pageSize || "A4",
+            footerText: args.footerText || "Souon AI Micro Store"
           });
+
+          // ダウンロード用バイナリのキャッシュ登録
+          const txId = chargeInfo.tx_id;
+          const safeTitle = docTitle.replace(/[^a-zA-Z0-9_\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF\-]/g, '_');
+          const filename = `${safeTitle || 'document'}_${txId}.pdf`;
+
+          if (typeof storeManager.registerDownloadFile === 'function') {
+            storeManager.registerDownloadFile(txId, {
+              buffer: pdfResult.buffer,
+              contentType: 'application/pdf',
+              filename
+            });
+          }
 
           return {
             jsonrpc: "2.0",
@@ -1135,12 +1565,20 @@ function createMcpHandler(storeManager) {
                   type: "text",
                   text: JSON.stringify({
                     success: true,
-                    cost_yen: complianceCostYen,
+                    cost_yen: chargeInfo.free_beta ? 0 : pdfCostYen,
+                    free_beta: chargeInfo.free_beta === true,
                     monthly_limit_yen: chargeInfo.monthly_limit_yen,
                     used_yen: chargeInfo.used_yen,
                     remaining_yen: chargeInfo.remaining_yen,
-                    tx_id: chargeInfo.tx_id,
-                    compliance: complianceResult
+                    tx_id: txId,
+                    download_url: `/api/download/${txId}`,
+                    filename,
+                    title: pdfResult.title,
+                    theme: pdfResult.theme,
+                    pageSize: pdfResult.pageSize,
+                    page_count: pdfResult.pageCount,
+                    size_bytes: pdfResult.sizeBytes,
+                    message: "Beautiful PDF generated successfully."
                   }, null, 2)
                 }
               ]
@@ -1152,10 +1590,349 @@ function createMcpHandler(storeManager) {
             id,
             result: {
               isError: true,
+              content: [{ type: "text", text: `Error generating PDF: ${err.message}` }]
+            }
+          };
+        }
+      }
+
+      // 4-8. generate_ogp_image (有料 10 JPY・APIキー必須・JP_RULES_ONLY時は除外)
+      if (toolName === "generate_ogp_image") {
+        if (process.env.JP_RULES_ONLY === 'true') {
+          return {
+            jsonrpc: "2.0",
+            id,
+            result: {
+              isError: true,
+              content: [{ type: "text", text: "Error: generate_ogp_image is unavailable in JP_RULES_ONLY mode." }]
+            }
+          };
+        }
+
+        const apiKey = args.apiKey || authHeaderKey;
+        if (!apiKey && !isFreeStoreMode()) {
+          return {
+            jsonrpc: "2.0",
+            id,
+            result: {
+              isError: true,
+              content: [{ type: "text", text: "Error: API key is required. Provide it in arguments.apiKey or HTTP Authorization Bearer header." }]
+            }
+          };
+        }
+
+        const title = args.title;
+        if (!title || typeof title !== 'string' || !title.trim()) {
+          return {
+            jsonrpc: "2.0",
+            id,
+            result: {
+              isError: true,
+              content: [{ type: "text", text: "Error: title is required and cannot be empty." }]
+            }
+          };
+        }
+
+        const ogpCostYen = 10;
+        let chargeInfo = null;
+        try {
+          chargeInfo = chargeOrFree(storeManager, apiKey, ogpCostYen, {
+            action: "generate_ogp_image",
+            description: "Generate OGP & Thumbnail Image (10 JPY)",
+            params: {
+              title,
+              theme: args.theme || "cyber_neon",
+              size: args.size || "ogp"
+            }
+          });
+        } catch (err) {
+          return {
+            jsonrpc: "2.0",
+            id,
+            result: {
+              isError: true,
               content: [
                 {
                   type: "text",
-                  text: `Error: ${err.message}`
+                  text: JSON.stringify({
+                    error: err.code || "CHARGE_FAILED",
+                    message: err.message,
+                    statusCode: err.statusCode || 500,
+                    monthly_limit_yen: err.monthly_limit_yen,
+                    used_yen: err.used_yen,
+                    price_yen: err.price_yen,
+                    remaining_yen: err.remaining_yen
+                  }, null, 2)
+                }
+              ]
+            }
+          };
+        }
+
+        const ogpGen = getOgpGenerator();
+        if (!ogpGen) {
+          return {
+            jsonrpc: "2.0",
+            id,
+            result: {
+              isError: true,
+              content: [{ type: "text", text: "Error: OGP generator engine is not available in current environment." }]
+            }
+          };
+        }
+
+        try {
+          const ogpResult = await ogpGen.generateOgpImageBuffer({
+            title,
+            subtitle: args.subtitle || "",
+            badge: args.badge || "AI COMMERCE",
+            author: args.author || "創音知能 • Souon Chinou",
+            theme: args.theme || "cyber_neon",
+            size: args.size || "ogp"
+          });
+
+          // ダウンロード用バイナリのキャッシュ登録
+          const txId = chargeInfo.tx_id;
+          const safeTitle = title.replace(/[^a-zA-Z0-9_\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF\-]/g, '_');
+          const filename = `ogp_${safeTitle || 'image'}_${txId}.png`;
+
+          if (typeof storeManager.registerDownloadFile === 'function') {
+            storeManager.registerDownloadFile(txId, {
+              buffer: ogpResult.buffer,
+              contentType: 'image/png',
+              filename
+            });
+          }
+
+          return {
+            jsonrpc: "2.0",
+            id,
+            result: {
+              content: [
+                {
+                  type: "text",
+                  text: JSON.stringify({
+                    success: true,
+                    cost_yen: chargeInfo.free_beta ? 0 : ogpCostYen,
+                    free_beta: chargeInfo.free_beta === true,
+                    monthly_limit_yen: chargeInfo.monthly_limit_yen,
+                    used_yen: chargeInfo.used_yen,
+                    remaining_yen: chargeInfo.remaining_yen,
+                    tx_id: txId,
+                    download_url: `/api/download/${txId}`,
+                    filename,
+                    width: ogpResult.width,
+                    height: ogpResult.height,
+                    size_bytes: ogpResult.size_bytes,
+                    theme: ogpResult.theme,
+                    size: ogpResult.size,
+                    message: "OGP / Thumbnail image generated successfully."
+                  }, null, 2)
+                }
+              ]
+            }
+          };
+        } catch (err) {
+          return {
+            jsonrpc: "2.0",
+            id,
+            result: {
+              isError: true,
+              content: [{ type: "text", text: `Error generating OGP image: ${err.message}` }]
+            }
+          };
+        }
+      }
+
+      // 4-9. create_temp_inbox (有料 10 JPY・APIキー必須・JP_RULES_ONLY時は除外)
+      if (toolName === "create_temp_inbox") {
+        if (process.env.JP_RULES_ONLY === 'true') {
+          return {
+            jsonrpc: "2.0",
+            id,
+            result: {
+              isError: true,
+              content: [{ type: "text", text: "Error: create_temp_inbox is unavailable in JP_RULES_ONLY mode." }]
+            }
+          };
+        }
+
+        const apiKey = args.apiKey || authHeaderKey;
+        if (!apiKey) {
+          return {
+            jsonrpc: "2.0",
+            id,
+            result: {
+              isError: true,
+              content: [{ type: "text", text: "Error: API key is required. Provide it in arguments.apiKey or HTTP Authorization Bearer header." }]
+            }
+          };
+        }
+
+        const inboxCostYen = 10;
+        let chargeInfo = null;
+        try {
+          chargeInfo = storeManager.chargeKey(apiKey, inboxCostYen, {
+            action: "create_temp_inbox",
+            description: "Create Disposable Email Inbox (10 JPY)",
+            params: {}
+          });
+        } catch (err) {
+          return {
+            jsonrpc: "2.0",
+            id,
+            result: {
+              isError: true,
+              content: [
+                {
+                  type: "text",
+                  text: JSON.stringify({
+                    error: err.code || "CHARGE_FAILED",
+                    message: err.message,
+                    statusCode: err.statusCode || 500,
+                    monthly_limit_yen: err.monthly_limit_yen,
+                    used_yen: err.used_yen,
+                    price_yen: err.price_yen,
+                    remaining_yen: err.remaining_yen
+                  }, null, 2)
+                }
+              ]
+            }
+          };
+        }
+
+        const tempMailMgr = typeof storeManager.getTempMailManager === 'function' ? storeManager.getTempMailManager() : null;
+        if (!tempMailMgr) {
+          return {
+            jsonrpc: "2.0",
+            id,
+            result: {
+              isError: true,
+              content: [{ type: "text", text: "Error: Temp mail manager is not available in current environment." }]
+            }
+          };
+        }
+
+        try {
+          const inboxResult = tempMailMgr.createInbox(apiKey);
+          return {
+            jsonrpc: "2.0",
+            id,
+            result: {
+              content: [
+                {
+                  type: "text",
+                  text: JSON.stringify({
+                    success: true,
+                    cost_yen: inboxCostYen,
+                    monthly_limit_yen: chargeInfo.monthly_limit_yen,
+                    used_yen: chargeInfo.used_yen,
+                    remaining_yen: chargeInfo.remaining_yen,
+                    tx_id: chargeInfo.tx_id,
+                    inbox_id: inboxResult.inbox_id,
+                    email: inboxResult.email,
+                    expires_at: inboxResult.expires_at,
+                    ttl_minutes: inboxResult.ttl_minutes,
+                    message: "Temporary inbox created successfully. Check incoming messages with read_temp_inbox."
+                  }, null, 2)
+                }
+              ]
+            }
+          };
+        } catch (err) {
+          return {
+            jsonrpc: "2.0",
+            id,
+            result: {
+              isError: true,
+              content: [{ type: "text", text: `Error creating inbox: ${err.message}` }]
+            }
+          };
+        }
+      }
+
+      // 4-10. read_temp_inbox (無料 0 JPY・APIキー必須・所有者検証・JP_RULES_ONLY時は除外)
+      if (toolName === "read_temp_inbox") {
+        if (process.env.JP_RULES_ONLY === 'true') {
+          return {
+            jsonrpc: "2.0",
+            id,
+            result: {
+              isError: true,
+              content: [{ type: "text", text: "Error: read_temp_inbox is unavailable in JP_RULES_ONLY mode." }]
+            }
+          };
+        }
+
+        const apiKey = args.apiKey || authHeaderKey;
+        if (!apiKey) {
+          return {
+            jsonrpc: "2.0",
+            id,
+            result: {
+              isError: true,
+              content: [{ type: "text", text: "Error: API key is required. Provide it in arguments.apiKey or HTTP Authorization Bearer header." }]
+            }
+          };
+        }
+
+        const inboxId = args.inbox_id;
+        if (!inboxId) {
+          return {
+            jsonrpc: "2.0",
+            id,
+            result: {
+              isError: true,
+              content: [{ type: "text", text: "Error: inbox_id is required." }]
+            }
+          };
+        }
+
+        const tempMailMgr = typeof storeManager.getTempMailManager === 'function' ? storeManager.getTempMailManager() : null;
+        if (!tempMailMgr) {
+          return {
+            jsonrpc: "2.0",
+            id,
+            result: {
+              isError: true,
+              content: [{ type: "text", text: "Error: Temp mail manager is not available in current environment." }]
+            }
+          };
+        }
+
+        try {
+          const readResult = tempMailMgr.readInbox(inboxId, apiKey);
+          return {
+            jsonrpc: "2.0",
+            id,
+            result: {
+              content: [
+                {
+                  type: "text",
+                  text: JSON.stringify({
+                    success: true,
+                    cost_yen: 0,
+                    ...readResult
+                  }, null, 2)
+                }
+              ]
+            }
+          };
+        } catch (err) {
+          const statusCode = err.statusCode || 500;
+          return {
+            jsonrpc: "2.0",
+            id,
+            result: {
+              isError: true,
+              content: [
+                {
+                  type: "text",
+                  text: JSON.stringify({
+                    error: err.code || "READ_INBOX_FAILED",
+                    statusCode,
+                    message: err.message
+                  }, null, 2)
                 }
               ]
             }

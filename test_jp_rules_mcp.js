@@ -773,6 +773,254 @@ async function runAsyncTest(testName, testFn) {
     assert.strictEqual(resServerJson.body.remotes[0].url, "https://jp-rules-mcp.onrender.com/mcp");
   });
 
+  // -------------------------------------------------------------
+  // Test Group 8: 無料リクエストの IP レート制限検証 (POST /mcp)
+  // -------------------------------------------------------------
+  const rateLimitServer = createStoreServer({
+    storePath: tempStorePath,
+    rateLimitMaxRequests: 3,
+    rateLimitWindowMs: 60000
+  });
+  const rlReq = (opts, body) => dispatchTestRequest(rateLimitServer.handleHttpRequest, { ...opts, body });
+
+  await runAsyncTest("08-1. 無料（APIキー無し）で上限以内は 200 OK で成功すること", async () => {
+    for (let i = 1; i <= 3; i++) {
+      const res = await rlReq({
+        method: 'POST',
+        url: '/mcp',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-forwarded-for': '203.0.113.1'
+        }
+      }, {
+        jsonrpc: "2.0",
+        id: `free_req_${i}`,
+        method: "tools/call",
+        params: {
+          name: "list_jp_rule_categories",
+          arguments: {}
+        }
+      });
+
+      assert.strictEqual(res.statusCode, 200, `Request #${i} within rate limit must be 200 OK`);
+      assert.ok(res.body.result && !res.body.result.isError, `Request #${i} must succeed`);
+    }
+  });
+
+  await runAsyncTest("08-2. 上限超過で HTTP 429、Retry-After ヘッダ、エラーコード -32029 が返ること", async () => {
+    // 4回目（上限3回を超過）
+    const res = await rlReq({
+      method: 'POST',
+      url: '/mcp',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-forwarded-for': '203.0.113.1'
+      }
+    }, {
+      jsonrpc: "2.0",
+      id: "req_rate_limit_exceeded",
+      method: "tools/call",
+      params: {
+        name: "list_jp_rule_categories",
+        arguments: {}
+      }
+    });
+
+    assert.strictEqual(res.statusCode, 429, "Exceeded request must return HTTP 429");
+    assert.ok(res.headers['retry-after'], "Must contain Retry-After header");
+    const retryAfter = parseInt(res.headers['retry-after'], 10);
+    assert.ok(!isNaN(retryAfter) && retryAfter >= 1, "Retry-After must be integer >= 1");
+
+    assert.strictEqual(res.body.jsonrpc, "2.0");
+    assert.strictEqual(res.body.id, "req_rate_limit_exceeded");
+    assert.ok(res.body.error, "Must contain JSON-RPC error");
+    assert.strictEqual(res.body.error.code, -32029);
+    assert.ok(res.body.error.message.includes("Free tier rate limit exceeded"), "Message must explain free tier limit");
+    assert.ok(res.body.error.message.includes("Get an API key"), "Message must guide to API key");
+  });
+
+  await runAsyncTest("08-3. 別の x-forwarded-for IP からのリクエストは影響を受けず 200 OK になること", async () => {
+    // 別IP（198.51.100.2）からのリクエスト
+    const res = await rlReq({
+      method: 'POST',
+      url: '/mcp',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-forwarded-for': '198.51.100.2, 10.0.0.1' // カンマ区切りのテストも兼ねる
+      }
+    }, {
+      jsonrpc: "2.0",
+      id: "other_ip_req",
+      method: "tools/call",
+      params: {
+        name: "list_jp_rule_categories",
+        arguments: {}
+      }
+    });
+
+    assert.strictEqual(res.statusCode, 200, "Request from distinct IP must not be throttled");
+    assert.ok(res.body.result && !res.body.result.isError);
+  });
+
+  await runAsyncTest("08-4. x-api-key ヘッダありのリクエストはレート制限に引っかからず通過すること", async () => {
+    // 既に無料上限超過している IP（203.0.113.1）から、x-api-key ありでリクエスト
+    const res = await rlReq({
+      method: 'POST',
+      url: '/mcp',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-forwarded-for': '203.0.113.1',
+        'x-api-key': testApiKey
+      }
+    }, {
+      jsonrpc: "2.0",
+      id: "auth_key_bypass_req",
+      method: "tools/call",
+      params: {
+        name: "list_jp_rule_categories",
+        arguments: {}
+      }
+    });
+
+    assert.strictEqual(res.statusCode, 200, "Request with x-api-key must bypass free rate limit");
+    assert.ok(res.body.result && !res.body.result.isError);
+  });
+
+  // -------------------------------------------------------------
+  // Test Group 9: JP_RULES_FREE_BETA=true 完全無料パブリックベータ検証
+  // -------------------------------------------------------------
+  await runAsyncTest("09-1. JP_RULES_FREE_BETA=true で GET /health が free_beta: true を返すこと", async () => {
+    const prevEnv = process.env.JP_RULES_FREE_BETA;
+    try {
+      process.env.JP_RULES_FREE_BETA = 'true';
+      const betaServer = createStoreServer({ storePath: tempStorePath });
+      const res = await dispatchTestRequest(betaServer.handleHttpRequest, { method: 'GET', url: '/health' });
+      assert.strictEqual(res.statusCode, 200);
+      assert.strictEqual(res.body.status, 'ok');
+      assert.strictEqual(res.body.free_beta, true, "health endpoint must report free_beta: true");
+    } finally {
+      if (prevEnv !== undefined) {
+        process.env.JP_RULES_FREE_BETA = prevEnv;
+      } else {
+        delete process.env.JP_RULES_FREE_BETA;
+      }
+    }
+  });
+
+  await runAsyncTest("09-2. JP_RULES_FREE_BETA=true で check_jp_travel_compliance が APIキー無し・0 JPY・free_beta: true で成功すること", async () => {
+    const prevEnv = process.env.JP_RULES_FREE_BETA;
+    try {
+      process.env.JP_RULES_FREE_BETA = 'true';
+      const betaServer = createStoreServer({ storePath: tempStorePath });
+
+      // APIキー無しで check_jp_travel_compliance を POST /mcp 経由で実行
+      const res = await dispatchTestRequest(betaServer.handleHttpRequest, {
+        method: 'POST',
+        url: '/mcp',
+        headers: { 'Content-Type': 'application/json' },
+        body: {
+          jsonrpc: "2.0",
+          id: "req_free_beta_check",
+          method: "tools/call",
+          params: {
+            name: "check_jp_travel_compliance",
+            arguments: {
+              checkType: "tax_free",
+              purchaseAmountJpy: 8000
+            }
+          }
+        }
+      });
+
+      assert.strictEqual(res.statusCode, 200);
+      assert.ok(res.body.result && !res.body.result.isError, "Call without API key in free beta must succeed");
+      const data = JSON.parse(res.body.result.content[0].text);
+      assert.strictEqual(data.success, true);
+      assert.strictEqual(data.cost_yen, 0, "Cost must be 0 JPY in free beta");
+      assert.strictEqual(data.free_beta, true, "Must flag free_beta: true in response");
+      assert.strictEqual(data.compliance.eligible, true);
+    } finally {
+      if (prevEnv !== undefined) {
+        process.env.JP_RULES_FREE_BETA = prevEnv;
+      } else {
+        delete process.env.JP_RULES_FREE_BETA;
+      }
+    }
+  });
+
+  await runAsyncTest("09-3. JP_RULES_FREE_BETA=true 時でも IP レート制限（1分30回）が無料 check に正しく効くこと", async () => {
+    const prevEnv = process.env.JP_RULES_FREE_BETA;
+    try {
+      process.env.JP_RULES_FREE_BETA = 'true';
+      const betaThrottledServer = createStoreServer({
+        storePath: tempStorePath,
+        rateLimitMaxRequests: 2,
+        rateLimitWindowMs: 60000
+      });
+
+      const clientIp = '198.51.100.99';
+
+      // 1回目 (200 OK)
+      const res1 = await dispatchTestRequest(betaThrottledServer.handleHttpRequest, {
+        method: 'POST',
+        url: '/mcp',
+        headers: { 'Content-Type': 'application/json', 'x-forwarded-for': clientIp },
+        body: {
+          jsonrpc: "2.0",
+          id: "beta_req_1",
+          method: "tools/call",
+          params: {
+            name: "check_jp_travel_compliance",
+            arguments: { checkType: "shinkansen_baggage", baggageTotalCm: 150 }
+          }
+        }
+      });
+      assert.strictEqual(res1.statusCode, 200);
+
+      // 2回目 (200 OK)
+      const res2 = await dispatchTestRequest(betaThrottledServer.handleHttpRequest, {
+        method: 'POST',
+        url: '/mcp',
+        headers: { 'Content-Type': 'application/json', 'x-forwarded-for': clientIp },
+        body: {
+          jsonrpc: "2.0",
+          id: "beta_req_2",
+          method: "tools/call",
+          params: {
+            name: "check_jp_travel_compliance",
+            arguments: { checkType: "shinkansen_baggage", baggageTotalCm: 150 }
+          }
+        }
+      });
+      assert.strictEqual(res2.statusCode, 200);
+
+      // 3回目 (上限超過 -> 429)
+      const res3 = await dispatchTestRequest(betaThrottledServer.handleHttpRequest, {
+        method: 'POST',
+        url: '/mcp',
+        headers: { 'Content-Type': 'application/json', 'x-forwarded-for': clientIp },
+        body: {
+          jsonrpc: "2.0",
+          id: "beta_req_3",
+          method: "tools/call",
+          params: {
+            name: "check_jp_travel_compliance",
+            arguments: { checkType: "shinkansen_baggage", baggageTotalCm: 150 }
+          }
+        }
+      });
+      assert.strictEqual(res3.statusCode, 429, "Free beta check must be throttled on rate limit exceeded");
+      assert.ok(res3.headers['retry-after']);
+      assert.strictEqual(res3.body.error.code, -32029);
+    } finally {
+      if (prevEnv !== undefined) {
+        process.env.JP_RULES_FREE_BETA = prevEnv;
+      } else {
+        delete process.env.JP_RULES_FREE_BETA;
+      }
+    }
+  });
+
   // クリーンアップ
   try {
     fs.rmSync(tempDir, { recursive: true, force: true });

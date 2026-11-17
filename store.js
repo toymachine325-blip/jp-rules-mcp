@@ -33,6 +33,22 @@ function getRocktypoMotion() {
   return rocktypoMotionModule;
 }
 
+let tempMailModule = null;
+function getTempMailModule() {
+  if (!tempMailModule && process.env.JP_RULES_ONLY !== 'true') {
+    try {
+      tempMailModule = require('./temp_mail');
+    } catch (e) {
+      try {
+        tempMailModule = require(path.resolve(__dirname, 'temp_mail'));
+      } catch (err) {
+        tempMailModule = null;
+      }
+    }
+  }
+  return tempMailModule;
+}
+
 const STORE_PATH = path.resolve(__dirname, 'data', 'store.json');
 const CYBER_COMIC_PROMPTS_PATH = path.resolve(__dirname, 'products', 'cyber_comic_prompts.json');
 
@@ -110,6 +126,15 @@ class StoreManager {
     this.fetchFn = this.options.fetch || (typeof fetch !== 'undefined' ? fetch : null);
     this.pendingRemoteSync = Promise.resolve();
     this.generatedMidiCache = new Map(); // tx_id -> Buffer
+    this.generatedFileCache = new Map(); // tx_id -> { buffer, contentType, filename }
+
+    const tmMod = getTempMailModule();
+    if (tmMod && tmMod.TempMailManager) {
+      this.tempMailManager = this.options.tempMailManager || new tmMod.TempMailManager(this.options.tempMailOptions || {});
+    } else {
+      this.tempMailManager = null;
+    }
+
     this.init();
   }
 
@@ -179,14 +204,16 @@ class StoreManager {
     }
     const jsonStr = JSON.stringify(data, null, 2);
     const tmpPath = `${this.storePath}.${Date.now()}.${crypto.randomBytes(4).toString('hex')}.tmp`;
-    fs.writeFileSync(tmpPath, jsonStr, 'utf8');
     try {
+      fs.writeFileSync(tmpPath, jsonStr, 'utf8');
       fs.renameSync(tmpPath, this.storePath);
     } catch (err) {
-      // Windowsでの EPERM / EBUSY 対策: 直書きフォールバック
+      // Windowsでの EPERM / EBUSY / 権限エラー対策: 直書きフォールバック
       fs.writeFileSync(this.storePath, jsonStr, 'utf8');
       try {
-        fs.unlinkSync(tmpPath);
+        if (fs.existsSync(tmpPath)) {
+          fs.unlinkSync(tmpPath);
+        }
       } catch (e) {}
     }
   }
@@ -621,6 +648,94 @@ class StoreManager {
     };
   }
 
+  // --- 商品の中身を作る（有料購入と無料ベータで共通） ---
+  _generateProductData(product, params, tx_id) {
+    let productData = null;
+    let generatedMidiBuf = null;
+
+    if (product.id === "drums-8beat-midi") {
+      const dm = getDrumsMidi();
+      if (!dm || typeof dm.generateDrumsMidiBuffer !== 'function') {
+        const err = new Error("Product generator for drums-8beat-midi is unavailable in this standalone environment.");
+        err.statusCode = 500;
+        throw err;
+      }
+      generatedMidiBuf = dm.generateDrumsMidiBuffer(params);
+      productData = {
+        type: "midi",
+        format: "SMF Type 0",
+        bpm: params.bpm || 121.86,
+        bars: params.bars || 16,
+        byte_length: generatedMidiBuf.length,
+        file_size_bytes: generatedMidiBuf.length,
+        midi_base64: generatedMidiBuf.toString('base64'),
+        download_url: `/api/download/${tx_id}`
+      };
+    } else if (product.id === "rocktypo-motion-json") {
+      const rm = getRocktypoMotion();
+      if (!rm || typeof rm.generateRockTypoMotion !== 'function') {
+        const err = new Error("Product generator for rocktypo-motion-json is unavailable in this standalone environment.");
+        err.statusCode = 500;
+        throw err;
+      }
+      const typoMotion = rm.generateRockTypoMotion(params);
+      productData = typoMotion;
+    } else if (product.id === "cyber-comic-prompts") {
+      try {
+        if (!fs.existsSync(CYBER_COMIC_PROMPTS_PATH)) {
+          throw new Error("File not found");
+        }
+        const fileContent = fs.readFileSync(CYBER_COMIC_PROMPTS_PATH, 'utf8');
+        productData = JSON.parse(fileContent);
+      } catch (e) {
+        productData = { error: "Failed to load prompts template", raw: e.message };
+      }
+    } else {
+      productData = { message: "Item purchased successfully", item: product.id };
+    }
+
+    return { productData, generatedMidiBuf };
+  }
+
+  // --- 無料ベータ用: キー不要。残高・保存データには触れない ---
+  purchaseFree(productId, params = {}) {
+    const data = this.load();
+    const product = (data.products || []).find(p => p.id === productId);
+    if (!product) {
+      const err = new Error(`Product not found: ${productId}`);
+      err.statusCode = 404;
+      err.code = "PRODUCT_NOT_FOUND";
+      throw err;
+    }
+
+    const tx_id = `tx_${crypto.randomBytes(8).toString('hex')}`;
+    const timestamp = new Date().toISOString();
+    const { productData, generatedMidiBuf } = this._generateProductData(product, params || {}, tx_id);
+
+    if (generatedMidiBuf) {
+      this._purgeCache(this.generatedMidiCache, 50, 3600000);
+      this.generatedMidiCache.set(tx_id, { buffer: generatedMidiBuf, createdAt: Date.now() });
+    }
+
+    return {
+      success: true,
+      tx_id,
+      timestamp,
+      free_beta: true,
+      product: {
+        id: product.id,
+        name: product.name,
+        price_yen: product.price_yen,
+        type: product.type
+      },
+      payment: {
+        amount_yen: 0,
+        free_beta: true
+      },
+      data: productData
+    };
+  }
+
   // --- 購入 ＆ お小遣い上限ロック ---
   purchase(apiKey, productId, params = {}) {
     const data = this.load();
@@ -672,9 +787,17 @@ class StoreManager {
       throw err;
     }
 
-    // 4. 上限チェック通過 -> 決済確定
+    // 4. 上限チェック通過 -> 商品実体データの生成・取得（生成成功後に課金確定）
     const tx_id = `tx_${crypto.randomBytes(8).toString('hex')}`;
     const timestamp = new Date().toISOString();
+
+    const { productData, generatedMidiBuf } = this._generateProductData(product, params, tx_id);
+
+    // 5. 商品生成成功を確認した上で残高減算・トランザクション確定
+    if (generatedMidiBuf) {
+      this._purgeCache(this.generatedMidiCache, 50, 3600000);
+      this.generatedMidiCache.set(tx_id, { buffer: generatedMidiBuf, createdAt: Date.now() });
+    }
 
     keyRecord.used_yen += price;
     const txRecord = {
@@ -690,50 +813,6 @@ class StoreManager {
 
     // アトミック保存
     this.save(data);
-
-    // 5. 商品実体データの生成・取得
-    let productData = null;
-    if (product.id === "drums-8beat-midi") {
-      const dm = getDrumsMidi();
-      if (!dm || typeof dm.generateDrumsMidiBuffer !== 'function') {
-        const err = new Error("Product generator for drums-8beat-midi is unavailable in this standalone environment.");
-        err.statusCode = 500;
-        throw err;
-      }
-      const midiBuffer = dm.generateDrumsMidiBuffer(params);
-      this.generatedMidiCache.set(tx_id, midiBuffer);
-      productData = {
-        type: "midi",
-        format: "SMF Type 0",
-        bpm: params.bpm || 121.86,
-        bars: params.bars || 16,
-        byte_length: midiBuffer.length,
-        file_size_bytes: midiBuffer.length,
-        midi_base64: midiBuffer.toString('base64'),
-        download_url: `/api/download/${tx_id}`
-      };
-    } else if (product.id === "rocktypo-motion-json") {
-      const rm = getRocktypoMotion();
-      if (!rm || typeof rm.generateRockTypoMotion !== 'function') {
-        const err = new Error("Product generator for rocktypo-motion-json is unavailable in this standalone environment.");
-        err.statusCode = 500;
-        throw err;
-      }
-      const typoMotion = rm.generateRockTypoMotion(params);
-      productData = typoMotion;
-    } else if (product.id === "cyber-comic-prompts") {
-      try {
-        if (!fs.existsSync(CYBER_COMIC_PROMPTS_PATH)) {
-          throw new Error("File not found");
-        }
-        const fileContent = fs.readFileSync(CYBER_COMIC_PROMPTS_PATH, 'utf8');
-        productData = JSON.parse(fileContent);
-      } catch (e) {
-        productData = { error: "Failed to load prompts template", raw: e.message };
-      }
-    } else {
-      productData = { message: "Item purchased successfully", item: product.id };
-    }
 
     return {
       success: true,
@@ -755,8 +834,50 @@ class StoreManager {
     };
   }
 
-  getMidiBufferByTx(txId) {
-    return this.generatedMidiCache.get(txId) || null;
+  _purgeCache(map, maxCount = 50, ttlMs = 3600000, now = Date.now()) {
+    if (!map || typeof map.entries !== 'function') return;
+    for (const [key, item] of map.entries()) {
+      if (item && item.createdAt && (now - item.createdAt > ttlMs)) {
+        map.delete(key);
+      }
+    }
+    while (map.size > maxCount) {
+      const oldestKey = map.keys().next().value;
+      map.delete(oldestKey);
+    }
+  }
+
+  getMidiBufferByTx(txId, now = Date.now()) {
+    this._purgeCache(this.generatedMidiCache, 50, 3600000, now);
+    const item = this.generatedMidiCache.get(txId);
+    if (!item) return null;
+    return Buffer.isBuffer(item) ? item : (item.buffer || null);
+  }
+
+  registerDownloadFile(txId, { buffer, contentType = 'application/pdf', filename = 'document.pdf' }, now = Date.now()) {
+    this._purgeCache(this.generatedFileCache, 50, 3600000, now);
+    this.generatedFileCache.set(txId, { buffer, contentType, filename, createdAt: now });
+  }
+
+  getDownloadFile(txId, now = Date.now()) {
+    this._purgeCache(this.generatedFileCache, 50, 3600000, now);
+    const fileObj = this.generatedFileCache.get(txId);
+    if (fileObj && fileObj.buffer) {
+      return fileObj;
+    }
+    const midi = this.getMidiBufferByTx(txId, now);
+    if (midi) {
+      return {
+        buffer: midi,
+        contentType: 'audio/midi',
+        filename: `souon_drums_${txId}.mid`
+      };
+    }
+    return null;
+  }
+
+  getTempMailManager() {
+    return this.tempMailManager;
   }
 }
 

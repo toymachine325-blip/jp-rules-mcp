@@ -1,0 +1,1341 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>創音知能 AI Micro Store | AI素材マイクロ決済ストア</title>
+  <style>
+    :root {
+      --bg-color: #0b0f19;
+      --card-bg: #151d30;
+      --card-border: #24324f;
+      --primary: #10b981;
+      --primary-hover: #059669;
+      --primary-light: rgba(16, 185, 129, 0.15);
+      --accent-cyan: #06b6d4;
+      --accent-purple: #8b5cf6;
+      --accent-amber: #f59e0b;
+      --accent-red: #ef4444;
+      --accent-red-bg: rgba(239, 68, 68, 0.12);
+      --text-main: #f1f5f9;
+      --text-muted: #94a3b8;
+      --text-dark: #64748b;
+      --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      --radius: 12px;
+      --radius-sm: 8px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      font-family: var(--font-family);
+      line-height: 1.5;
+      padding: 16px 12px 64px 12px;
+      overflow-x: hidden;
+      max-width: 860px;
+      margin: 0 auto;
+    }
+
+    /* ヘッダー */
+    header {
+      text-align: center;
+      padding: 16px 8px 24px 8px;
+      border-bottom: 1px solid var(--card-border);
+      margin-bottom: 24px;
+    }
+
+    .badge-tag {
+      display: inline-block;
+      background: var(--primary-light);
+      color: var(--primary);
+      font-size: 12px;
+      font-weight: 700;
+      padding: 4px 12px;
+      border-radius: 999px;
+      margin-bottom: 8px;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      letter-spacing: 0.05em;
+    }
+
+    h1 {
+      font-size: 24px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin-bottom: 8px;
+      background: linear-gradient(135deg, #ffffff 30%, #94a3b8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .subtitle {
+      font-size: 14px;
+      color: var(--text-muted);
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    /* セクション共通 */
+    .section-box {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius);
+      padding: 20px 16px;
+      margin-bottom: 24px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+    }
+
+    .section-title {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .step-number {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      background: var(--primary);
+      color: #000;
+      font-size: 14px;
+      font-weight: 800;
+      border-radius: 50%;
+    }
+
+    /* フォーム要素 */
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+
+    input[type="text"], input[type="number"] {
+      width: 100%;
+      height: 44px;
+      background: #0d1322;
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-sm);
+      color: #fff;
+      font-size: 15px;
+      padding: 0 12px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    input[type="text"]:focus, input[type="number"]:focus {
+      border-color: var(--primary);
+    }
+
+    /* プリセットボタングループ */
+    .preset-container {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .btn-preset {
+      height: 44px;
+      background: #0d1322;
+      border: 1px solid var(--card-border);
+      color: var(--text-main);
+      border-radius: var(--radius-sm);
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .btn-preset:hover {
+      border-color: var(--accent-cyan);
+    }
+
+    .btn-preset.active {
+      background: var(--primary-light);
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+
+    /* ボタン共通 */
+    .btn-main {
+      width: 100%;
+      min-height: 44px;
+      background: var(--primary);
+      color: #000;
+      font-size: 15px;
+      font-weight: 700;
+      border: none;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: background 0.2s, transform 0.1s;
+    }
+
+    .btn-main:active {
+      transform: scale(0.98);
+    }
+
+    .btn-main:hover {
+      background: var(--primary-hover);
+    }
+
+    .btn-secondary {
+      min-height: 44px;
+      background: #24324f;
+      color: #fff;
+      font-size: 14px;
+      font-weight: 600;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: var(--radius-sm);
+      padding: 0 16px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s;
+    }
+
+    .btn-secondary:hover {
+      background: #2d3e63;
+    }
+
+    /* 残高メーターカード */
+    .wallet-card {
+      background: #0d1322;
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-sm);
+      padding: 16px;
+      margin-top: 16px;
+      display: none;
+    }
+
+    .wallet-card.visible {
+      display: block;
+    }
+
+    .wallet-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 8px;
+    }
+
+    .wallet-name {
+      font-weight: 700;
+      font-size: 15px;
+      color: #fff;
+    }
+
+    .wallet-status {
+      font-size: 12px;
+      color: var(--primary);
+      font-weight: 700;
+    }
+
+    .meter-bar-container {
+      width: 100%;
+      height: 12px;
+      background: #1f293d;
+      border-radius: 999px;
+      overflow: hidden;
+      margin: 8px 0 12px 0;
+    }
+
+    .meter-bar-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--primary) 0%, var(--accent-cyan) 100%);
+      transition: width 0.4s ease, background 0.4s ease;
+    }
+
+    .meter-bar-fill.warning {
+      background: linear-gradient(90deg, var(--accent-amber) 0%, #d97706 100%);
+    }
+
+    .meter-bar-fill.danger {
+      background: linear-gradient(90deg, var(--accent-red) 0%, #dc2626 100%);
+    }
+
+    .wallet-stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      text-align: center;
+      margin-bottom: 12px;
+    }
+
+    .stat-item {
+      background: rgba(255, 255, 255, 0.03);
+      padding: 8px 4px;
+      border-radius: 6px;
+    }
+
+    .stat-label {
+      font-size: 11px;
+      color: var(--text-dark);
+      margin-bottom: 2px;
+    }
+
+    .stat-val {
+      font-size: 15px;
+      font-weight: 800;
+      color: #fff;
+    }
+
+    .stat-val.highlight {
+      color: var(--primary);
+    }
+
+    .key-display {
+      background: #070a12;
+      border: 1px dashed var(--card-border);
+      border-radius: 6px;
+      padding: 10px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      font-family: monospace;
+      font-size: 12px;
+      color: var(--text-muted);
+      word-break: break-all;
+    }
+
+    .btn-copy {
+      min-height: 44px;
+      padding: 0 12px;
+      background: #1f293d;
+      color: #fff;
+      border: 1px solid var(--card-border);
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* 商品グリッド */
+    .products-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 16px;
+    }
+
+    @media (min-width: 640px) {
+      .products-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+
+    .product-card {
+      background: #0d1322;
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-sm);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: transform 0.2s, border-color 0.2s;
+    }
+
+    .product-card:hover {
+      border-color: rgba(16, 185, 129, 0.4);
+    }
+
+    .product-tag {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 4px;
+    }
+
+    .tag-midi { color: var(--accent-cyan); }
+    .tag-json { color: var(--accent-purple); }
+    .tag-file { color: var(--accent-amber); }
+
+    .product-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 6px;
+      line-height: 1.3;
+    }
+
+    .product-desc {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+      flex-grow: 1;
+    }
+
+    .product-price-box {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      padding-top: 8px;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .price-yen {
+      font-size: 22px;
+      font-weight: 900;
+      color: var(--primary);
+    }
+
+    .price-unit {
+      font-size: 12px;
+      color: var(--text-dark);
+      margin-left: 2px;
+    }
+
+    .btn-buy {
+      width: 100%;
+      min-height: 44px;
+      background: #1f293d;
+      color: #fff;
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-sm);
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+
+    .btn-buy:hover {
+      background: var(--primary);
+      color: #000;
+      border-color: var(--primary);
+    }
+
+    .btn-buy:active {
+      transform: scale(0.98);
+    }
+
+    /* アラート・通知エリア */
+    .alert-banner {
+      border-radius: var(--radius-sm);
+      padding: 14px 16px;
+      margin-bottom: 16px;
+      font-size: 14px;
+      display: none;
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .alert-danger {
+      background: var(--accent-red-bg);
+      border: 1.5px solid var(--accent-red);
+      color: #fca5a5;
+    }
+
+    .alert-danger strong {
+      color: #fff;
+      display: block;
+      font-size: 15px;
+      margin-bottom: 4px;
+    }
+
+    .alert-success {
+      background: var(--primary-light);
+      border: 1.5px solid var(--primary);
+      color: #a7f3d0;
+    }
+
+    .alert-success strong {
+      color: #fff;
+      display: block;
+      font-size: 15px;
+      margin-bottom: 4px;
+    }
+
+    /* 購入結果モーダル/インライン表示エリア */
+    .receipt-container {
+      background: #0d1322;
+      border: 1px solid var(--primary);
+      border-radius: var(--radius-sm);
+      padding: 16px;
+      margin-top: 20px;
+      display: none;
+    }
+
+    .receipt-title {
+      font-size: 16px;
+      font-weight: 800;
+      color: var(--primary);
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .receipt-details {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+      background: rgba(0, 0, 0, 0.2);
+      padding: 8px 12px;
+      border-radius: 6px;
+    }
+
+    .receipt-content-box {
+      background: #070a12;
+      border: 1px solid var(--card-border);
+      border-radius: 6px;
+      padding: 12px;
+      font-family: monospace;
+      font-size: 12px;
+      max-height: 200px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+      color: #cbd5e1;
+      margin-bottom: 12px;
+    }
+
+    .btn-download {
+      min-height: 44px;
+      background: var(--accent-cyan);
+      color: #000;
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 700;
+      border-radius: var(--radius-sm);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 20px;
+      gap: 8px;
+      transition: background 0.2s;
+    }
+
+    .btn-download:hover {
+      background: #0891b2;
+      color: #fff;
+    }
+
+    /* アコーディオン (折りたたみAI情報) */
+    details {
+      background: #0d1322;
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-sm);
+      padding: 12px 16px;
+      margin-top: 16px;
+      cursor: pointer;
+    }
+
+    summary {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-muted);
+      outline: none;
+      user-select: none;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    summary::-webkit-details-marker {
+      display: none;
+    }
+
+    summary::after {
+      content: "＋";
+      font-size: 16px;
+      font-weight: bold;
+      color: var(--primary);
+    }
+
+    details[open] summary::after {
+      content: "－";
+    }
+
+    .details-body {
+      margin-top: 16px;
+      border-top: 1px solid var(--card-border);
+      padding-top: 12px;
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+
+    .code-snippet {
+      background: #070a12;
+      border: 1px solid var(--card-border);
+      border-radius: 6px;
+      padding: 12px;
+      font-family: monospace;
+      font-size: 12px;
+      color: #38bdf8;
+      overflow-x: auto;
+      margin: 8px 0;
+    }
+
+    /* フッター */
+    footer {
+      text-align: center;
+      margin-top: 36px;
+      font-size: 12px;
+      color: var(--text-dark);
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="badge-tag">SOUON CHINOU • AI COMMERCE ARCHITECTURE</div>
+    <h1>AI Micro Store</h1>
+    <p class="subtitle">
+      AIエージェントが自律的に素材を調達できる、月額上限ガード付きマイクロ決済ストア。<br>
+      ブラウザから人間がお小遣いを設定し、実際に購入テストを体験できます。
+    </p>
+  </header>
+
+  <!-- アラート通知エリア（上限ストップ等） -->
+  <div id="alertBox" class="alert-banner"></div>
+
+  <!-- ステップ①：AIのお小遣いを決める -->
+  <section class="section-box">
+    <div class="section-title">
+      <span class="step-number">1</span>
+      <span>AIのお小遣い（上限）を決める</span>
+    </div>
+    
+    <div class="form-group">
+      <label for="agentName">AIエージェントの名前</label>
+      <input type="text" id="agentName" value="創音マイAI相棒" placeholder="例: 制作アシスタントAI">
+    </div>
+
+    <div class="form-group">
+      <label>月額上限金額（プリセット選択または直接入力）</label>
+      <div class="preset-container">
+        <button type="button" class="btn-preset active" data-limit="100">100円</button>
+        <button type="button" class="btn-preset" data-limit="500">500円</button>
+        <button type="button" class="btn-preset" data-limit="2000">2,000円</button>
+      </div>
+      <input type="number" id="monthlyLimit" value="100" min="10" step="10" placeholder="上限金額（円）">
+    </div>
+
+    <button type="button" id="btnCreateKey" class="btn-main">
+      <span>🔑</span>
+      <span>お小遣いキーを発行する</span>
+    </button>
+
+    <!-- 残高メーター＆キー表示カード -->
+    <div id="walletCard" class="wallet-card">
+      <div class="wallet-header">
+        <div class="wallet-name" id="walletAgentName">AI Agent</div>
+        <div class="wallet-status" id="walletStatus">● 稼働中（安全ガード有効）</div>
+      </div>
+
+      <div class="meter-bar-container">
+        <div id="meterBarFill" class="meter-bar-fill"></div>
+      </div>
+
+      <div class="wallet-stats">
+        <div class="stat-item">
+          <div class="stat-label">使った額</div>
+          <div class="stat-val" id="statUsed">0円</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-label">残り利用可能</div>
+          <div class="stat-val highlight" id="statRemaining">100円</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-label">月額上限</div>
+          <div class="stat-val" id="statLimit">100円</div>
+        </div>
+      </div>
+
+      <label style="margin-top: 8px;">発行されたお小遣いキー (API Key)</label>
+      <div class="key-display">
+        <span id="currentKeyText">キー未発行</span>
+        <button type="button" id="btnCopyKey" class="btn-copy">コピー</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ステップ②：商品を買ってみる（テスト購入） -->
+  <section class="section-box">
+    <div class="section-title">
+      <span class="step-number">2</span>
+      <span>商品を買ってみる（テスト購入）</span>
+    </div>
+    <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">
+      下の「この商品を買う（テスト）」を押すと、実際にAPI経由で決済が実行され、お小遣い残高が消費されます。上限を超えると安全ストップします！
+    </p>
+
+    <div class="products-grid" id="productsGrid">
+      <!-- 1. ドラムMIDI -->
+      <div class="product-card" data-product-id="drums-8beat-midi">
+        <div>
+          <div class="product-tag tag-midi">MIDI / DTM素材</div>
+          <div class="product-title">8ビート王道ドラムMIDI素材</div>
+          <div class="product-desc">
+            Standard MIDI File (Type 0)。BPM120、ハイハット・キック・スネアのノリ良いリズムパターン。
+          </div>
+        </div>
+        <div>
+          <div class="product-price-box">
+            <span class="price-yen">30<span class="price-unit">円</span></span>
+            <span style="font-size: 11px; color: var(--text-dark);">即時ダウンロード可</span>
+          </div>
+          <button type="button" class="btn-buy" onclick="handlePurchase('drums-8beat-midi')">
+            <span>🛒 この商品を買う (テスト)</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 2. タイポJSON -->
+      <div class="product-card" data-product-id="rocktypo-motion-json">
+        <div>
+          <div class="product-tag tag-json">Motion / JSON</div>
+          <div class="product-title">キレキレタイポモーション設定JSON</div>
+          <div class="product-desc">
+            After Effects / CSSアニメーション用。ミリ秒単位のイージングとグリッチエフェクト座標定義。
+          </div>
+        </div>
+        <div>
+          <div class="product-price-box">
+            <span class="price-yen">50<span class="price-unit">円</span></span>
+            <span style="font-size: 11px; color: var(--text-dark);">コード即時展開</span>
+          </div>
+          <button type="button" class="btn-buy" onclick="handlePurchase('rocktypo-motion-json')">
+            <span>🛒 この商品を買う (テスト)</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 3. MVプロンプト集 -->
+      <div class="product-card" data-product-id="cyber-comic-prompts">
+        <div>
+          <div class="product-tag tag-file">AI Prompt / Text</div>
+          <div class="product-title">サイバー・コミック風MV構図プロンプト集</div>
+          <div class="product-desc">
+            コミックインク、半トーン、鮮烈な色収差、パースの効いたダイナミックアングル構図指示集。
+          </div>
+        </div>
+        <div>
+          <div class="product-price-box">
+            <span class="price-yen">300<span class="price-unit">円</span></span>
+            <span style="font-size: 11px; color: var(--text-dark);">高密度プロンプト集</span>
+          </div>
+          <button type="button" class="btn-buy" onclick="handlePurchase('cyber-comic-prompts')">
+            <span>🛒 この商品を買う (テスト)</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 新機能：美麗 PDF 生成 MCP ツール紹介＆無料ライブデモ (Gate 4 スマホ基準) -->
+    <div class="pdf-tool-banner" style="background: linear-gradient(135deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.9)); border: 1.5px solid var(--accent-cyan); border-radius: var(--radius-sm); padding: 18px; margin-top: 20px;">
+      <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-bottom: 8px;">
+        <span class="product-tag" style="background: rgba(56, 189, 248, 0.2); color: var(--accent-cyan); border: 1px solid var(--accent-cyan);">NEW • MCP Tool</span>
+        <span style="font-size: 18px; font-weight: 800; color: #fff;">20<span style="font-size: 12px; color: var(--text-muted);"> 円 / 回</span></span>
+      </div>
+      <div style="font-size: 16px; font-weight: 800; color: #fff; margin-bottom: 6px;">
+        📄 Markdown → 美麗 PDF 生成ツール (generate_beautiful_pdf)
+      </div>
+      <div style="font-size: 13px; color: var(--text-muted); line-height: 1.5; margin-bottom: 12px;">
+        AIエージェントがMarkdownテキストを渡すだけで、表・コード・引用・見出し・ページ番号付きの美しいビジネスレポート/サイバーテック調PDFを直接生成＆ダウンロード配信します（日本語・英語完全対応）。
+      </div>
+
+      <!-- PDF ライブデモ操作エリア -->
+      <div style="background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 6px; padding: 12px; margin-bottom: 12px;">
+        <div style="font-size: 12px; font-weight: 700; color: var(--accent-cyan); margin-bottom: 6px;">⚡ 無料ライブデモ（ブラウザから即テスト）</div>
+        <div style="margin-bottom: 8px;">
+          <label style="font-size: 11px; color: var(--text-muted); display: block; margin-bottom: 4px;">テーマ:</label>
+          <select id="demo-pdf-theme" class="topup-input" style="min-height: 44px; width: 100%; cursor: pointer;">
+            <option value="business_report">Business Report (白背景・ネイビー)</option>
+            <option value="modern_clean">Modern Clean (オフホワイト・ティール)</option>
+            <option value="dark_tech">Dark Tech (ダーク・ネオンシアン)</option>
+          </select>
+        </div>
+        <div style="margin-bottom: 10px;">
+          <label style="font-size: 11px; color: var(--text-muted); display: block; margin-bottom: 4px;">Markdown サンプル:</label>
+          <textarea id="demo-pdf-markdown" class="topup-input" style="min-height: 80px; width: 100%; font-family: monospace; font-size: 12px; resize: vertical;" rows="3"># 創音知能 プロジェクト月次サマリー
+> 美麗 PDF 生成エンジンの無料プレビューです。
+- 高速レンダリング＆日本語フォント自動解決
+- A4 / Letter 対応
+| 項目 | 状態 |
+|:---|:---:|
+| セキュリティ | PASS |</textarea>
+        </div>
+        <button type="button" id="btn-run-demo-pdf" class="btn-main" style="min-height: 44px; width: 100%; background: var(--accent-cyan); color: #022c22; font-weight: 700;" onclick="runDemoPdf()">
+          <span>📄 美麗PDFを即時生成 (無料デモ)</span>
+        </button>
+        <div id="demo-pdf-result" style="display: none; margin-top: 10px; font-size: 12px;">
+          <span style="color: #34d399; font-weight: 700;">✓ 生成成功！</span>
+          <div style="display: flex; gap: 8px; margin-top: 6px;">
+            <a id="btn-view-demo-pdf" href="#" target="_blank" class="btn-buy" style="text-align: center; text-decoration: none; padding: 8px 14px; min-height: 44px; line-height: 28px;">別タブで開く</a>
+            <a id="btn-dl-demo-pdf" href="#" download="demo_preview.pdf" class="btn-buy" style="text-align: center; text-decoration: none; padding: 8px 14px; min-height: 44px; line-height: 28px;">ダウンロード</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 新機能：OGP・サムネイル画像生成 MCP ツール紹介＆無料ライブデモ (Gate 4 スマホ基準) -->
+    <div class="ogp-tool-banner" style="background: linear-gradient(135deg, rgba(15, 23, 42, 0.8), rgba(24, 24, 27, 0.9)); border: 1.5px solid #f59e0b; border-radius: var(--radius-sm); padding: 18px; margin-top: 16px;">
+      <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-bottom: 8px;">
+        <span class="product-tag" style="background: rgba(245, 158, 11, 0.2); color: #f59e0b; border: 1px solid #f59e0b;">NEW • MCP Tool</span>
+        <span style="font-size: 18px; font-weight: 800; color: #fff;">10<span style="font-size: 12px; color: var(--text-muted);"> 円 / 回</span></span>
+      </div>
+      <div style="font-size: 16px; font-weight: 800; color: #fff; margin-bottom: 6px;">
+        🖼️ SNS用 OGP・YouTubeサムネイル生成ツール (generate_ogp_image)
+      </div>
+      <div style="font-size: 13px; color: var(--text-muted); line-height: 1.5; margin-bottom: 12px;">
+        タイトル・サブタイトル・バッジを渡すだけで、Rustベースの超高速エンジンがサイバーネオン/クリーン/ボールド調の高品質PNG画像（1200x630 / 1280x720 / 1080x1080）を即時生成＆ダウンロード配信します。
+      </div>
+
+      <!-- OGP ライブデモ操作エリア -->
+      <div style="background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 6px; padding: 12px; margin-bottom: 12px;">
+        <div style="font-size: 12px; font-weight: 700; color: #f59e0b; margin-bottom: 6px;">⚡ 無料ライブデモ（ブラウザから即テスト）</div>
+        <div style="margin-bottom: 8px;">
+          <label style="font-size: 11px; color: var(--text-muted); display: block; margin-bottom: 4px;">タイトル:</label>
+          <input type="text" id="demo-ogp-title" class="topup-input" style="min-height: 44px; width: 100%;" value="AIエージェント自律調達ストア爆誕！" placeholder="タイトルを入力">
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px;">
+          <div>
+            <label style="font-size: 11px; color: var(--text-muted); display: block; margin-bottom: 4px;">テーマ:</label>
+            <select id="demo-ogp-theme" class="topup-input" style="min-height: 44px; width: 100%; cursor: pointer;">
+              <option value="cyber_neon">Cyber Neon</option>
+              <option value="clean_minimal">Clean Minimal</option>
+              <option value="bold_editorial">Bold Editorial</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size: 11px; color: var(--text-muted); display: block; margin-bottom: 4px;">サイズ:</label>
+            <select id="demo-ogp-size" class="topup-input" style="min-height: 44px; width: 100%; cursor: pointer;">
+              <option value="ogp">OGP (1200x630)</option>
+              <option value="youtube">YouTube (1280x720)</option>
+              <option value="square">Square (1080x1080)</option>
+            </select>
+          </div>
+        </div>
+        <button type="button" id="btn-run-demo-ogp" class="btn-main" style="min-height: 44px; width: 100%; background: #f59e0b; color: #000; font-weight: 800;" onclick="runDemoOgp()">
+          <span>🖼️ OGP画像を即時プレビュー生成 (無料デモ)</span>
+        </button>
+        <div id="demo-ogp-result" style="display: none; margin-top: 10px;">
+          <div style="font-size: 12px; color: #34d399; font-weight: 700; margin-bottom: 6px;">✓ プレビュー生成完了:</div>
+          <img id="demo-ogp-preview" src="" alt="Demo OGP Preview" style="max-width: 100%; height: auto; border-radius: 6px; border: 1px solid rgba(255,255,255,0.2); margin-bottom: 8px; display: block;">
+          <a id="btn-dl-demo-ogp" href="#" download="demo_ogp.png" class="btn-buy" style="display: inline-block; text-align: center; text-decoration: none; padding: 8px 14px; min-height: 44px; line-height: 28px;">PNG画像を保存</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- 新機能：使い捨てメール受信＆OTP抽出 MCP ツール紹介＆無料ライブデモ (Gate 4 スマホ基準) -->
+    <div class="temp-mail-banner" style="background: linear-gradient(135deg, rgba(15, 23, 42, 0.8), rgba(30, 27, 75, 0.9)); border: 1.5px solid #818cf8; border-radius: var(--radius-sm); padding: 18px; margin-top: 16px;">
+      <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-bottom: 8px;">
+        <span class="product-tag" style="background: rgba(129, 140, 248, 0.2); color: #818cf8; border: 1px solid #818cf8;">NEW • MCP Tool</span>
+        <span style="font-size: 18px; font-weight: 800; color: #fff;">発行 10<span style="font-size: 12px; color: var(--text-muted);"> 円 / 照会 0 円</span></span>
+      </div>
+      <div style="font-size: 16px; font-weight: 800; color: #fff; margin-bottom: 6px;">
+        📬 使い捨てメール受信＆OTP・認証リンク自動抽出 (create_temp_inbox / read_temp_inbox)
+      </div>
+      <div style="font-size: 13px; color: var(--text-muted); line-height: 1.5; margin-bottom: 12px;">
+        AIエージェントの自律サインアップに最適。30分間有効な仮メールアドレスを即時発行し、届いた認証メールから4〜8桁の確認コード（OTP）や本登録URLを高精度に自動抽出します（所有者アクセス制限完備）。
+      </div>
+
+      <!-- メールライブデモ操作エリア -->
+      <div style="background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 6px; padding: 12px; margin-bottom: 12px;">
+        <div style="font-size: 12px; font-weight: 700; color: #818cf8; margin-bottom: 8px;">⚡ 無料ライブデモ（アドレス発行・メール受信・OTP抽出テスト）</div>
+        <button type="button" id="btn-run-demo-mail" class="btn-main" style="min-height: 44px; width: 100%; background: #818cf8; color: #020617; font-weight: 800;" onclick="runDemoTempMail()">
+          <span>📬 仮メール発行＆認証メール受信テスト (無料デモ)</span>
+        </button>
+        <div id="demo-mail-result" style="display: none; margin-top: 12px; font-size: 12px; background: #020617; border: 1px solid #818cf8; border-radius: 6px; padding: 12px;">
+          <div style="color: #34d399; font-weight: 700; margin-bottom: 6px;">✓ メール受信＆OTP自動抽出成功！</div>
+          <div style="margin-bottom: 6px;"><span style="color: var(--text-muted);">発行アドレス:</span> <code id="demo-mail-address" style="color: #38bdf8;"></code></div>
+          <div style="margin-bottom: 8px;"><span style="color: var(--text-muted);">抽出された認証コード:</span> <span id="demo-mail-otp" style="display: inline-block; background: #38bdf8; color: #000; font-weight: 900; font-size: 16px; padding: 2px 10px; border-radius: 4px; letter-spacing: 2px;"></span></div>
+          <div style="margin-bottom: 4px;"><span style="color: var(--text-muted);">件名:</span> <span id="demo-mail-subject" style="color: #fff;"></span></div>
+          <div><span style="color: var(--text-muted);">検出リンク:</span> <a id="demo-mail-link" href="#" target="_blank" style="color: #818cf8; word-break: break-all;"></a></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 購入結果レシートエリア -->
+    <div id="receiptContainer" class="receipt-container">
+      <div class="receipt-title">
+        <span>🎉</span>
+        <span id="receiptTitleText">購入完了（領収証）</span>
+      </div>
+      <div class="receipt-details" id="receiptDetailsText">
+        商品名: - | 決済金額: - | 取引ID: -
+      </div>
+      <div class="receipt-content-box" id="receiptContentBox">
+        購入データがここに展開されます...
+      </div>
+      <div id="receiptDownloadArea" style="display: none; margin-top: 12px;">
+        <a id="btnDownloadMidi" href="#" class="btn-download" download>
+          <span>💾</span>
+          <span>.mid ファイルをダウンロード</span>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- 折りたたみ：AIエージェント用接続情報 -->
+  <details class="section-box" style="padding: 16px;">
+    <summary>🤖 AIエージェントに接続する人向け（MCP / REST API設定）</summary>
+    <div class="details-body">
+      <p style="margin-bottom: 8px;">
+        Claude Desktop や Antigravity 等のAIエージェントから直接このストアを呼び出す設定です。<br>
+        AIに以下のMCP設定を登録すると、AI自らが商品一覧を確認し、許可されたお小遣いの範囲内で自律調達します。
+      </p>
+
+      <strong>Claude Desktop 設定例 (`claude_desktop_config.json`)</strong>
+      <div class="code-snippet" id="snippetMcpConfig">{
+  "mcpServers": {
+    "souon-store": {
+      "url": "http://localhost:3456/mcp",
+      "headers": {
+        "Authorization": "Bearer &lt;発行されたお小遣いキー&gt;"
+      }
+    }
+  }
+}</div>
+
+      <strong style="margin-top: 12px; display: block;">curl による直接購入コマンド例</strong>
+      <div class="code-snippet" id="snippetCurl">curl -X POST http://localhost:3456/api/purchase \
+  -H "Authorization: Bearer &lt;APIキー&gt;" \
+  -H "Content-Type: application/json" \
+  -d '{"product_id": "drums-8beat-midi"}'</div>
+    </div>
+  </details>
+
+  <footer>
+    <p>創音知能 (Souon Chinou) AI Micro Commerce System • Local Sandbox Ready</p>
+  </footer>
+
+  <script>
+    // 状態管理
+    let currentApiKey = localStorage.getItem('souon_store_api_key') || null;
+    let currentAgentName = localStorage.getItem('souon_store_agent_name') || '創音マイAI相棒';
+
+    const dom = {
+      agentName: document.getElementById('agentName'),
+      monthlyLimit: document.getElementById('monthlyLimit'),
+      btnCreateKey: document.getElementById('btnCreateKey'),
+      btnPresets: document.querySelectorAll('.btn-preset'),
+      walletCard: document.getElementById('walletCard'),
+      walletAgentName: document.getElementById('walletAgentName'),
+      statUsed: document.getElementById('statUsed'),
+      statRemaining: document.getElementById('statRemaining'),
+      statLimit: document.getElementById('statLimit'),
+      meterBarFill: document.getElementById('meterBarFill'),
+      currentKeyText: document.getElementById('currentKeyText'),
+      btnCopyKey: document.getElementById('btnCopyKey'),
+      alertBox: document.getElementById('alertBox'),
+      receiptContainer: document.getElementById('receiptContainer'),
+      receiptTitleText: document.getElementById('receiptTitleText'),
+      receiptDetailsText: document.getElementById('receiptDetailsText'),
+      receiptContentBox: document.getElementById('receiptContentBox'),
+      receiptDownloadArea: document.getElementById('receiptDownloadArea'),
+      btnDownloadMidi: document.getElementById('btnDownloadMidi'),
+      snippetMcpConfig: document.getElementById('snippetMcpConfig'),
+      snippetCurl: document.getElementById('snippetCurl')
+    };
+
+    // 初期化
+    window.addEventListener('DOMContentLoaded', () => {
+      dom.agentName.value = currentAgentName;
+      initPresets();
+      if (currentApiKey) {
+        refreshWallet();
+      }
+    });
+
+    // プリセットボタン
+    function initPresets() {
+      dom.btnPresets.forEach(btn => {
+        btn.addEventListener('click', () => {
+          dom.btnPresets.forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          dom.monthlyLimit.value = btn.dataset.limit;
+        });
+      });
+      dom.monthlyLimit.addEventListener('input', () => {
+        dom.btnPresets.forEach(b => {
+          if (b.dataset.limit === dom.monthlyLimit.value) {
+            b.classList.add('active');
+          } else {
+            b.classList.remove('active');
+          }
+        });
+      });
+    }
+
+    // アラート表示
+    function showAlert(type, title, message) {
+      dom.alertBox.className = `alert-banner ${type === 'danger' ? 'alert-danger' : 'alert-success'}`;
+      dom.alertBox.innerHTML = `<strong>${title}</strong>${message}`;
+      dom.alertBox.style.display = 'block';
+      dom.alertBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    function hideAlert() {
+      dom.alertBox.style.display = 'none';
+    }
+
+    // キー発行
+    dom.btnCreateKey.addEventListener('click', async () => {
+      hideAlert();
+      const name = dom.agentName.value.trim() || "マイAIエージェント";
+      const limit = parseInt(dom.monthlyLimit.value, 10) || 100;
+
+      dom.btnCreateKey.disabled = true;
+      dom.btnCreateKey.textContent = "発行中...";
+
+      try {
+        const res = await fetch('/api/keys', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, monthly_limit_yen: limit })
+        });
+        const data = await res.json();
+        if (data.success && data.key) {
+          currentApiKey = data.key.key;
+          currentAgentName = data.key.name;
+          localStorage.setItem('souon_store_api_key', currentApiKey);
+          localStorage.setItem('souon_store_agent_name', currentAgentName);
+
+          showAlert('success', '🔑 お小遣いキーを新しく発行しました！', `月額上限: ${limit}円 で安全ガードが有効化されました。下のテスト購入を試してみてください。`);
+          updateWalletUI(data.key);
+          updateSnippets(currentApiKey);
+        } else {
+          showAlert('danger', 'キー発行エラー', data.message || "発行に失敗しました");
+        }
+      } catch (err) {
+        showAlert('danger', '通信エラー', 'サーバーに接続できませんでした: ' + err.message);
+      } finally {
+        dom.btnCreateKey.disabled = false;
+        dom.btnCreateKey.innerHTML = '<span>🔑</span><span>お小遣いキーを発行する</span>';
+      }
+    });
+
+    // キー情報・利用状況の更新
+    async function refreshWallet() {
+      if (!currentApiKey) return;
+      try {
+        const res = await fetch(`/api/keys/${encodeURIComponent(currentApiKey)}/usage`);
+        if (res.status === 404) {
+          // 期限切れやテストDBリセット時
+          localStorage.removeItem('souon_store_api_key');
+          currentApiKey = null;
+          dom.walletCard.classList.remove('visible');
+          return;
+        }
+        const data = await res.json();
+        if (data.success && data.usage) {
+          updateWalletUI(data.usage);
+          updateSnippets(currentApiKey);
+        }
+      } catch (err) {
+        console.error("Failed to refresh wallet:", err);
+      }
+    }
+
+    function updateWalletUI(usage) {
+      dom.walletCard.classList.add('visible');
+      dom.walletAgentName.textContent = usage.name || "AI Agent";
+      dom.currentKeyText.textContent = usage.key || currentApiKey;
+
+      const used = usage.used_yen || 0;
+      const limit = usage.monthly_limit_yen || 100;
+      const remaining = Math.max(0, limit - used);
+
+      dom.statUsed.textContent = `${used.toLocaleString()}円`;
+      dom.statRemaining.textContent = `${remaining.toLocaleString()}円`;
+      dom.statLimit.textContent = `${limit.toLocaleString()}円`;
+
+      const pct = Math.min(100, Math.round((used / limit) * 100));
+      dom.meterBarFill.style.width = `${pct}%`;
+      dom.meterBarFill.className = 'meter-bar-fill';
+      if (pct >= 90) {
+        dom.meterBarFill.classList.add('danger');
+      } else if (pct >= 70) {
+        dom.meterBarFill.classList.add('warning');
+      }
+    }
+
+    function updateSnippets(key) {
+      if (dom.snippetMcpConfig) {
+        dom.snippetMcpConfig.textContent = JSON.stringify({
+          mcpServers: {
+            "souon-store": {
+              "url": "http://localhost:3456/mcp",
+              "headers": {
+                "Authorization": `Bearer ${key}`
+              }
+            }
+          }
+        }, null, 2);
+      }
+      if (dom.snippetCurl) {
+        dom.snippetCurl.textContent = `curl -X POST http://localhost:3456/api/purchase \\\n  -H "Authorization: Bearer ${key}" \\\n  -H "Content-Type: application/json" \\\n  -d '{"product_id": "drums-8beat-midi"}'`;
+      }
+    }
+
+    // キーコピーボタン
+    dom.btnCopyKey.addEventListener('click', () => {
+      if (!currentApiKey) return;
+      navigator.clipboard.writeText(currentApiKey).then(() => {
+        const orig = dom.btnCopyKey.textContent;
+        dom.btnCopyKey.textContent = "コピー完了！";
+        setTimeout(() => dom.btnCopyKey.textContent = orig, 1500);
+      }).catch(() => {
+        alert("コピーしました: " + currentApiKey);
+      });
+    });
+
+    // 購入処理ハンドラ
+    async function handlePurchase(productId) {
+      hideAlert();
+      if (!currentApiKey) {
+        showAlert('danger', 'お小遣いキーがありません', 'まず上の【ステップ①】で「お小遣いキーを発行する」ボタンを押してください。');
+        return;
+      }
+
+      const buyBtns = document.querySelectorAll('.btn-buy');
+      buyBtns.forEach(b => b.disabled = true);
+
+      try {
+        const res = await fetch('/api/purchase', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${currentApiKey}`
+          },
+          body: JSON.stringify({
+            product_id: productId
+          })
+        });
+
+        const data = await res.json();
+
+        if (res.status === 402 || data.error === 'LIMIT_EXCEEDED') {
+          // 上限ストップ発動！
+          showAlert(
+            'danger',
+            '🚨 上限に達したためストップしました！（HTTP 402 LIMIT_EXCEEDED）',
+            `このAIキーの月額上限（${data.monthly_limit_yen}円）を超過するため購入を拒否しました。<br>` +
+            `現在の利用額: <strong>${data.used_yen}円</strong> / 商品価格: <strong>${data.required_yen}円</strong> / 残高: <strong>${data.remaining_yen}円</strong><br>` +
+            `💡 AIエージェントが暴走して買いすぎる事故を100%防ぐ、安心のお小遣い安全ガードです！`
+          );
+          await refreshWallet();
+          return;
+        }
+
+        if (!res.ok || !data.success) {
+          showAlert('danger', '購入エラー', data.message || `エラー (${res.status}) が発生しました`);
+          return;
+        }
+
+        // 成功！
+        showAlert('success', '🎉 購入が正常に完了しました！', `商品: <strong>${data.product.name}</strong> を <strong>${data.payment.amount_yen}円</strong> で購入しました。`);
+        await refreshWallet();
+
+        // 領収証・購入中身の展開表示
+        displayReceipt(data);
+
+      } catch (err) {
+        showAlert('danger', '通信エラー', '購入リクエストに失敗しました: ' + err.message);
+      } finally {
+        buyBtns.forEach(b => b.disabled = false);
+      }
+    }
+
+    // レシート表示
+    function displayReceipt(data) {
+      dom.receiptContainer.style.display = 'block';
+      const paidAmount = (data.payment && data.payment.amount_yen !== undefined)
+        ? data.payment.amount_yen
+        : (data.product && data.product.price_yen !== undefined ? data.product.price_yen : '-');
+      dom.receiptTitleText.textContent = `購入完了: ${data.product?.name || '商品'} (${paidAmount}円)`;
+
+      const txId = data.tx_id || data.transaction_id || '-';
+      const remainingYen = (data.payment && data.payment.remaining_yen !== undefined)
+        ? data.payment.remaining_yen
+        : (data.wallet && data.wallet.remaining_yen !== undefined ? data.wallet.remaining_yen : '-');
+
+      dom.receiptDetailsText.textContent = `取引ID: ${txId} | 日時: ${new Date(data.timestamp || Date.now()).toLocaleString()} | 残高: ${remainingYen}円`;
+
+      dom.receiptDownloadArea.style.display = 'none';
+
+      if (data.data && data.data.type === 'midi') {
+        const sizeBytes = data.data.file_size_bytes || data.data.byte_length || '-';
+        dom.receiptContentBox.textContent = 
+          `【ドラムMIDI生成完了】\n` +
+          `フォーマット: ${data.data.format || 'SMF Type 0'}\n` +
+          `BPM: ${data.data.bpm} | 小節数: ${data.data.bars}\n` +
+          `トラック構成: Kick, Snare, Closed HH, Open HH\n` +
+          `ファイルサイズ: ${sizeBytes} bytes\n` +
+          `ダウンロードURL: ${data.data.download_url}`;
+
+        dom.btnDownloadMidi.href = data.data.download_url;
+        dom.receiptDownloadArea.style.display = 'block';
+      } else if (data.data && data.data.type === 'motion_typo_json') {
+        dom.receiptContentBox.textContent = JSON.stringify(data.data.motion_preset, null, 2);
+      } else if (data.data && data.data.type === 'file_content') {
+        dom.receiptContentBox.textContent = JSON.stringify(data.data.content, null, 2);
+      } else {
+        dom.receiptContentBox.textContent = JSON.stringify(data.data, null, 2);
+      }
+
+      dom.receiptContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    // 無料ライブデモ実行関数群 (OGP & PDF)
+    async function runDemoOgp() {
+      const btn = document.getElementById('btn-run-demo-ogp');
+      const title = document.getElementById('demo-ogp-title').value.trim();
+      const theme = document.getElementById('demo-ogp-theme').value;
+      const size = document.getElementById('demo-ogp-size').value;
+      const previewImg = document.getElementById('demo-ogp-preview');
+      const dlBtn = document.getElementById('btn-dl-demo-ogp');
+      const resultBox = document.getElementById('demo-ogp-result');
+
+      if (!title) { alert('タイトルを入力してください'); return; }
+      btn.disabled = true;
+      btn.innerText = '生成中...';
+
+      try {
+        const res = await fetch('/api/demo/ogp', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title, theme, size, badge: 'DEMO' })
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          alert('エラー: ' + (err.message || res.statusText));
+          return;
+        }
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        previewImg.src = url;
+        dlBtn.href = url;
+        dlBtn.download = `demo_${size}.png`;
+        resultBox.style.display = 'block';
+      } catch (e) {
+        alert('通信エラー: ' + e.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerText = '🖼️ OGP画像を即時プレビュー生成 (無料デモ)';
+      }
+    }
+
+    async function runDemoPdf() {
+      const btn = document.getElementById('btn-run-demo-pdf');
+      const markdown = document.getElementById('demo-pdf-markdown').value.trim();
+      const theme = document.getElementById('demo-pdf-theme').value;
+      const dlBtn = document.getElementById('btn-dl-demo-pdf');
+      const viewBtn = document.getElementById('btn-view-demo-pdf');
+      const resultBox = document.getElementById('demo-pdf-result');
+
+      if (!markdown) { alert('Markdownを入力してください'); return; }
+      btn.disabled = true;
+      btn.innerText = 'PDF生成中...';
+
+      try {
+        const res = await fetch('/api/demo/pdf', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ markdown, theme, title: 'デモプレビュー' })
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          alert('エラー: ' + (err.message || res.statusText));
+          return;
+        }
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        dlBtn.href = url;
+        dlBtn.download = 'demo_preview.pdf';
+        viewBtn.href = url;
+        resultBox.style.display = 'block';
+      } catch (e) {
+        alert('通信エラー: ' + e.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerText = '📄 美麗PDFを即時生成 (無料デモ)';
+      }
+    }
+
+    async function runDemoTempMail() {
+      const btn = document.getElementById('btn-run-demo-mail');
+      const resultBox = document.getElementById('demo-mail-result');
+      const addrEl = document.getElementById('demo-mail-address');
+      const otpEl = document.getElementById('demo-mail-otp');
+      const subjEl = document.getElementById('demo-mail-subject');
+      const linkEl = document.getElementById('demo-mail-link');
+
+      btn.disabled = true;
+      btn.innerText = 'メール受信＆コード解析中...';
+
+      try {
+        const res = await fetch('/api/demo/temp-mail', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({})
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          alert('エラー: ' + (err.message || res.statusText));
+          return;
+        }
+        const data = await res.json();
+        addrEl.textContent = data.email || '-';
+        otpEl.textContent = data.latest_otp || '未検出';
+        subjEl.textContent = data.sample_subject || '-';
+        if (data.verification_links && data.verification_links.length > 0) {
+          linkEl.href = data.verification_links[0];
+          linkEl.textContent = data.verification_links[0];
+          linkEl.style.display = 'inline';
+        } else {
+          linkEl.style.display = 'none';
+        }
+        resultBox.style.display = 'block';
+      } catch (e) {
+        alert('通信エラー: ' + e.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerText = '📬 仮メール発行＆認証メール受信テスト (無料デモ)';
+      }
+    }
+  </script>
+</body>
+</html>

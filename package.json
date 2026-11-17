@@ -7,7 +7,14 @@
     "start": "node server.js",
     "test": "node test_store.js",
     "test:billing": "node test_billing_deploy.js",
-    "test:rules": "node test_jp_rules_mcp.js"
+    "test:rules": "node test_jp_rules_mcp.js",
+    "test:pdf": "node test_pdf_generator.js",
+    "test:ogp": "node test_ogp_generator.js",
+    "test:demo": "node test_demo_endpoints.js",
+    "test:mail": "node test_temp_mail.js",
+    "test:usage": "node test_usage_stats.js",
+    "test:free": "node test_free_beta_store.js",
+    "test:all": "node test_store.js && node test_billing_deploy.js && node test_jp_rules_mcp.js && node test_pdf_generator.js && node test_ogp_generator.js && node test_demo_endpoints.js && node test_temp_mail.js && node test_usage_stats.js && node test_free_beta_store.js"
   },
   "homepage": "https://jp-rules-mcp.onrender.com",
   "repository": {
@@ -26,5 +33,8 @@
   ],
   "author": "創音知能 (Souon Chino)",
   "license": "MIT",
-  "dependencies": {}
+  "dependencies": {
+    "@resvg/resvg-js": "^2.6.2",
+    "pdfkit": "^0.20.2"
+  }
 }

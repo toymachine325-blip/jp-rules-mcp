@@ -33,6 +33,30 @@ A high-performance, **zero-npm-dependency** Model Context Protocol (MCP) server 
 
 ---
 
+## 🎁 Whole-store free beta
+
+When `JP_RULES_ONLY=false` and `JP_RULES_FREE_BETA=true`, the whole store is free: no API key, no charge.
+
+| Tool | What it does |
+| :--- | :--- |
+| `generate_beautiful_pdf` | Markdown → clean PDF (Japanese & English) |
+| `generate_ogp_image` | Title → OGP / thumbnail PNG |
+| `purchase_product` | Drum MIDI, motion JSON, prompt pack |
+| `list_products` | List the above |
+
+The disposable-mail tools are held back until a real receiving domain is configured (`TEMP_MAIL_DOMAIN`).
+Run the whole store with `docker build -f Dockerfile.store .` (see the file for details).
+
+Free requests are limited to 30 requests/min per IP.
+
+### Usage counter
+
+The server counts calls per day and per tool. No IP, user agent or request content is stored; "unique users" is an approximate daily count.
+Set `STATS_TOKEN`, then read `GET /api/stats?days=30` with the header `x-stats-token`. Without the variable the endpoint returns 404.
+Add the header `x-usage-ignore: 1` to your own test calls to keep them out of the counts.
+
+---
+
 ## 🛠 Available MCP Tools & Pricing
 
 | Tool Name | Price | Auth | Description |

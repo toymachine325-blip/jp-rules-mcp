@@ -401,6 +401,28 @@
       word-break: break-all;
     }
 
+    /* Preset Chips */
+    .preset-chip {
+      background: rgba(56, 189, 248, 0.12);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      color: var(--accent-cyan);
+      font-size: 11px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 9999px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      min-height: 30px;
+      display: inline-flex;
+      align-items: center;
+    }
+
+    .preset-chip:hover {
+      background: rgba(56, 189, 248, 0.25);
+      border-color: var(--accent-cyan);
+      color: #fff;
+    }
+
     footer {
       text-align: center;
       font-size: 12px;
@@ -413,7 +435,7 @@
 
   <!-- Header -->
   <header>
-    <div class="badge-tag">Model Context Protocol Server</div>
+    <div class="badge-tag" id="hero-badge">Model Context Protocol Server</div>
     <h1>Japan Inbound & Cross-Border Rules MCP</h1>
     <p class="subtitle">
       Real-time, cross-checked official regulations for international travelers entering and shopping in Japan. 
@@ -452,28 +474,71 @@
     </div>
   </div>
 
-  <!-- Live Free Test (list_jp_rule_categories) -->
+  <!-- Live Free Test (list_jp_rule_categories & query_jp_inbound_rules) -->
   <div class="section-card">
     <div class="section-title">
       <span>⚡</span>
       <span>Live Interactive Test (Free, 0 JPY)</span>
     </div>
-    <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">
-      Test the live MCP endpoint directly from your browser. Invokes <code>list_jp_rule_categories</code> with zero authentication required.
+    <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 14px;">
+      Test the live MCP endpoint directly from your browser with zero authentication.
+      Inspect available categories or query official regulations in real time (Free, 0 JPY, no API key required).
     </p>
-    <button id="btn-try-free" class="btn btn-cyan" onclick="tryFreeCategoryTool()">
-      Try Free Tool (list_jp_rule_categories)
+
+    <!-- Interactive Search Demo (query_jp_inbound_rules) -->
+    <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid var(--card-border); border-radius: var(--radius-sm); padding: 14px; margin-bottom: 14px;">
+      <div style="font-size: 13px; font-weight: 700; color: var(--accent-cyan); margin-bottom: 10px; display: flex; align-items: center; gap: 6px;">
+        <span>🔍</span>
+        <span>Live Rule Search (query_jp_inbound_rules)</span>
+      </div>
+
+      <!-- Presets for fast exploration -->
+      <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; align-items: center;">
+        <span style="font-size: 11px; color: var(--text-muted); margin-right: 2px;">Presets:</span>
+        <button type="button" class="preset-chip" onclick="setSearchPreset('tax-free 2026', 'tax_free')">🛍️ Tax-Free 2026</button>
+        <button type="button" class="preset-chip" onclick="setSearchPreset('shinkansen baggage oversized', 'rail_luggage')">🚄 Bullet Train Luggage</button>
+        <button type="button" class="preset-chip" onclick="setSearchPreset('Golden Week peak', 'holidays')">🎌 Holiday Rush</button>
+        <button type="button" class="preset-chip" onclick="setSearchPreset('meat quarantine prohibited', 'customs')">🛃 Customs Restrictions</button>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        <div>
+          <label class="topup-label" for="search-category" style="margin-bottom: 4px; display: block;">Category Filter:</label>
+          <select id="search-category" class="topup-input" style="cursor: pointer;">
+            <option value="">All Categories</option>
+            <option value="tax_free">🛍️ Tax-Free Shopping (Nov 2026 Reform)</option>
+            <option value="rail_luggage">🚄 Shinkansen Oversized Baggage</option>
+            <option value="holidays">🎌 Peak Holiday Congestion Risk</option>
+            <option value="customs">🛃 Customs & Quarantine Restrictions</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="topup-label" for="search-keyword" style="margin-bottom: 4px; display: block;">Keyword:</label>
+          <input type="text" id="search-keyword" class="topup-input" placeholder="e.g. tax-free, shinkansen, baggage, Golden Week" value="tax-free 2026">
+        </div>
+
+        <button id="btn-search-rules" class="btn btn-cyan" onclick="trySearchRulesTool()">
+          🔍 Search Official Rules (Free, 0 JPY)
+        </button>
+      </div>
+    </div>
+
+    <!-- Category Overview Button (list_jp_rule_categories) -->
+    <button id="btn-try-free" class="btn btn-secondary" onclick="tryFreeCategoryTool()">
+      📋 Inspect All Categories & Rule Counts (list_jp_rule_categories)
     </button>
+
     <div id="live-output" class="live-output"></div>
   </div>
 
   <!-- Pricing & Stripe Checkout -->
-  <div class="section-card">
+  <div class="section-card" id="pricing-section">
     <div class="section-title">
       <span>💳</span>
-      <span>AI Allowance Plans (Stripe Instant Checkout)</span>
+      <span id="pricing-title-text">AI Allowance Plans (Stripe Instant Checkout)</span>
     </div>
-    <p style="font-size: 13px; color: var(--text-muted);">
+    <p id="pricing-desc" style="font-size: 13px; color: var(--text-muted);">
       Automated compliance check (<code>check_jp_travel_compliance</code>) is charged at <strong>30 JPY / call</strong> with hard-limit locks (HTTP 402). 
       Rule queries and categories (<code>list_jp_rule_categories</code>, <code>query_jp_inbound_rules</code>) are <strong>Free (0 JPY)</strong> with no API key required.
       Purchase an allowance plan below to receive your instant API Key (<code>sk_souon_...</code>).
@@ -723,12 +788,68 @@
         });
 
         const data = await res.json();
-        output.innerText = JSON.stringify(data, null, 2);
+        if (res.status === 429) {
+          const retryAfter = res.headers.get('Retry-After') || '60';
+          output.innerText = `[HTTP 429 Rate Limit Exceeded]\nRetry-After: ${retryAfter}s\n\n${JSON.stringify(data, null, 2)}`;
+        } else {
+          output.innerText = JSON.stringify(data, null, 2);
+        }
       } catch (err) {
         output.innerText = 'Error calling MCP: ' + err.message;
       } finally {
         btn.disabled = false;
-        btn.innerText = 'Try Free Tool (list_jp_rule_categories)';
+        btn.innerText = '📋 Inspect All Categories & Rule Counts (list_jp_rule_categories)';
+      }
+    }
+
+    // 4. Live Free Search Tool Test (query_jp_inbound_rules)
+    function setSearchPreset(keyword, category) {
+      document.getElementById('search-keyword').value = keyword;
+      document.getElementById('search-category').value = category || '';
+    }
+
+    async function trySearchRulesTool() {
+      const btn = document.getElementById('btn-search-rules');
+      const output = document.getElementById('live-output');
+      const keyword = document.getElementById('search-keyword').value.trim();
+      const category = document.getElementById('search-category').value.trim();
+
+      btn.disabled = true;
+      btn.innerText = 'Searching /mcp ...';
+      output.style.display = 'block';
+      output.innerText = 'Executing query_jp_inbound_rules via POST /mcp...';
+
+      const args = {};
+      if (keyword) args.keyword = keyword;
+      if (category) args.category = category;
+
+      try {
+        const res = await fetch('/mcp', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            jsonrpc: "2.0",
+            id: "try_live_search_" + Date.now(),
+            method: "tools/call",
+            params: {
+              name: "query_jp_inbound_rules",
+              arguments: args
+            }
+          })
+        });
+
+        const data = await res.json();
+        if (res.status === 429) {
+          const retryAfter = res.headers.get('Retry-After') || '60';
+          output.innerText = `[HTTP 429 Rate Limit Exceeded]\nRetry-After: ${retryAfter}s\n\n${JSON.stringify(data, null, 2)}`;
+        } else {
+          output.innerText = JSON.stringify(data, null, 2);
+        }
+      } catch (err) {
+        output.innerText = 'Error calling MCP: ' + err.message;
+      } finally {
+        btn.disabled = false;
+        btn.innerText = '🔍 Search Official Rules (Free, 0 JPY)';
       }
     }
 
@@ -740,6 +861,43 @@
         prompt('Copy snippet:', text);
       });
     }
+
+    // 5. Automatic Free Public Beta Check via GET /health
+    async function initFreeBetaCheck() {
+      try {
+        const res = await fetch('/health');
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data && data.free_beta === true) {
+          const badge = document.getElementById('hero-badge');
+          if (badge) {
+            badge.innerText = '⚡ Free Public Beta — All 3 Tools Free (0 JPY / No API Key Required, 30 req/min)';
+            badge.style.background = 'rgba(16, 185, 129, 0.2)';
+            badge.style.color = '#34d399';
+            badge.style.borderColor = 'rgba(16, 185, 129, 0.4)';
+          }
+
+          const pricingTitle = document.getElementById('pricing-title-text');
+          if (pricingTitle) {
+            pricingTitle.innerText = 'Optional AI Allowance Plans (Paid Tier Coming Soon after Beta)';
+          }
+
+          const pricingDesc = document.getElementById('pricing-desc');
+          if (pricingDesc) {
+            pricingDesc.innerHTML = `
+              <span style="display: inline-block; background: rgba(16, 185, 129, 0.15); color: #34d399; font-weight: 700; padding: 2px 8px; border-radius: 4px; margin-bottom: 6px;">
+                🎉 PUBLIC BETA ACTIVE: All 3 Tools Free (0 JPY)
+              </span><br>
+              During the public beta, <strong>all 3 tools (<code>list_jp_rule_categories</code>, <code>query_jp_inbound_rules</code>, and <code>check_jp_travel_compliance</code>) are 100% free with no API key required</strong> (subject to 30 requests/min rate limit). Paid tiers below are optional for higher capacity after beta.
+            `;
+          }
+        }
+      } catch (err) {
+        // Fallback to standard view on error
+      }
+    }
+
+    initFreeBetaCheck();
   </script>
 </body>
 </html>

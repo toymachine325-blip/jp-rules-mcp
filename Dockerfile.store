@@ -1,0 +1,41 @@
+# -----------------------------------------------------------------------------
+# Souon AI Micro Store (whole store: PDF / OGP / MIDI & JSON products + Japan rules)
+#
+# Build from the repository root:
+#   docker build -f Dockerfile.store -t souon-ai-micro-store .
+# Run:
+#   docker run -p 3456:3456 -e STATS_TOKEN=change-me souon-ai-micro-store
+#
+# Free public beta: no API key, no charge (JP_RULES_FREE_BETA=true).
+# The disposable-mail tools stay hidden until TEMP_MAIL_DOMAIN is set.
+# -----------------------------------------------------------------------------
+FROM node:20-alpine
+
+WORKDIR /app
+
+ENV NODE_ENV=production
+ENV PORT=3456
+ENV JP_RULES_ONLY=false
+ENV JP_RULES_FREE_BETA=true
+
+# Production dependencies (pdfkit + prebuilt @resvg/resvg-js)
+COPY package*.json ./
+RUN npm ci --omit=dev
+
+COPY server.js mcp.js store.js stripe_billing.js usage_stats.js pdf_generator.js ogp_generator.js temp_mail.js ./
+COPY products/ ./products/
+COPY jp_rules/ ./jp_rules/
+COPY public/ ./public/
+
+# Japanese font used by the PDF and OGP generators
+COPY fonts/ ./fonts/
+
+RUN mkdir -p /app/data && chown -R node:node /app
+USER node
+
+EXPOSE 3456
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD node -e "require('http').get('http://localhost:3456/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"
+
+CMD ["node", "server.js"]

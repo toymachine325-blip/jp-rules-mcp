@@ -11,10 +11,11 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3456
 ENV JP_RULES_ONLY=true
+ENV JP_RULES_FREE_BETA=true
 
 # Copy application files
 COPY package*.json ./
-COPY server.js mcp.js store.js stripe_billing.js ./
+COPY server.js mcp.js store.js stripe_billing.js usage_stats.js ./
 COPY jp_rules/ ./jp_rules/
 COPY public/ ./public/
 

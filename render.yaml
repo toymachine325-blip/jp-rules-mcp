@@ -18,6 +18,11 @@ services:
         value: 3456
       - key: JP_RULES_ONLY
         value: "true"
+      - key: JP_RULES_FREE_BETA
+        value: "true"
+      # 利用状況 (GET /api/stats) を見るための合言葉。未設定なら /api/stats は無効（404）
+      - key: STATS_TOKEN
+        sync: false
       - key: STRIPE_SECRET_KEY
         sync: false
       - key: STRIPE_WEBHOOK_SECRET

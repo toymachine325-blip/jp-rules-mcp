@@ -727,11 +727,16 @@ function dispatchTestRequest(handler, options = {}) {
     assert.ok(html.includes("Shinkansen Oversized Baggage"), "Must contain Shinkansen baggage rule");
     assert.ok(html.includes("/api/billing/session"), "Must integrate with session polling");
     assert.ok(html.includes("list_jp_rule_categories"), "Must integrate with live free tool");
+    assert.ok(html.includes("query_jp_inbound_rules"), "Must integrate with live search tool");
+    assert.ok(html.includes("search-keyword"), "Must contain search keyword input");
+    assert.ok(html.includes("search-category"), "Must contain category filter select");
+    assert.ok(html.includes("btn-search-rules"), "Must contain search execute button");
 
-    // Gate 4 スマホ実機基準 (375px-414pxレスポンシブ & 44pxタップ領域)
+    // Gate 4 スマホ実機基準 (375px-414pxレスポンシブ & 44pxタップ領域 & 横はみ出し防止)
     assert.ok(html.includes("viewport"), "Must have viewport meta tag");
     assert.ok(html.includes("width=device-width"), "Must adapt to device width");
     assert.ok(html.includes("44px"), "Must secure 44px min-height tap targets");
+    assert.ok(html.includes("word-break: break-all"), "Must prevent horizontal overflow on live output");
   });
 
   // -------------------------------------------------------------
